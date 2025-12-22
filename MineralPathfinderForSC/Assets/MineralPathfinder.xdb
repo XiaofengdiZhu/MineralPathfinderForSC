@@ -1,0 +1,7 @@
+﻿<Mod xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://gitee.com/SC-SPM/SurvivalcraftApi/raw/SCAPI1.8/Survivalcraft.Windows/Content/Assets/Database.xsd">
+  <ProjectTemplate Name="Project" Guid="85023bf8-1c90-4dd1-9442-e6c13691d078">
+    <MemberSubsystemTemplate Name="MineralPathfinderBlockBehavior" Guid="d374b13d-d427-4364-b716-7f32e7be6af2" InheritanceParent="aea46453-65b5-463a-9e0b-45f80bc41285">
+      <Parameter Name="Class" Guid="4fc82961-2b44-4918-85b6-e1b7b14ddfa2" Value="Game.SubsystemMineralPathfinderBlockBehavior" Type="string" />
+    </MemberSubsystemTemplate>
+  </ProjectTemplate>
+</Mod>

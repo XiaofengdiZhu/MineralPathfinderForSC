@@ -1,0 +1,11 @@
+{
+  "Name": "Mineral Pathfinder 寻矿器",
+  "Version": "0.1",
+  "ApiVersion": "1.8.2.2",
+  "Description": "",
+  "ScVersion": "2.4.0.0",
+  "Link": "https://github.com/XiaofengdiZhu/MineralPathfinderForSC",
+  "Author": "销锋镝铸 XiaofengdiZhu",
+  "PackageName": "xfdz.MineralPathfinderForSC",
+  "Dependencies": {}
+}

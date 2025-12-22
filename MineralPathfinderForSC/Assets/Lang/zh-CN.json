@@ -1,0 +1,66 @@
+{
+  "SubsystemMineralPathfinderBlockBehavior": {
+    "1": "已经有一个扫描在进行",
+    "2": "扫描太频繁了",
+    "3": "扫描成功，共 {0} 组结果",
+    "4": "未扫描到目标方块"
+  },
+  "EditMineralPathfinderDialog": {
+    "1": "排序方式",
+    "2": "筛选",
+    "3": "无效的方块 ID (1-1023)",
+    "4": "（支持正则）",
+    "5": "已添加到收藏",
+    "6": "已从收藏中移除",
+    "7": "上次睡觉地点",
+    "8": "上次死亡地点",
+    "SortOrder": {
+      "DisplayOrderAscending": "显示顺序升序",
+      "DisplayOrderDescending": "显示顺序降序",
+      "ContentsAscending": "方块 ID 升序",
+      "ContentsDescending": "方块 ID 降序",
+      "NameAscending": "名称升序",
+      "NameDescending": "名称降序"
+    },
+    "FilterMethod": {
+      "All": "全部",
+      "Name": "搜索名称",
+      "Contents": "搜索方块 ID",
+      "Category": "类别",
+      "Favorite": "收藏"
+    }
+  },
+  "ManuallyInputBlockValueDialog": {
+    "1": "无效的输入"
+  },
+  "Blocks": {
+    "MineralPathfinderBlock:0": {
+      "DisplayName": "寻矿器",
+      "Description": "",
+      "CRDescription:0": "使用 9 种矿石合成寻矿器"
+    }
+  },
+  "ContentWidgets": {
+    "EditMineralPathfinderDialog": {
+      "1": "寻矿器",
+      "2": "选择",
+      "3": "最大结果数",
+      "4": "扫描范围",
+      "5": "显示箭头"
+    },
+    "ManuallyInputBlockValueDialog": {
+      "1": "手动输入方块 ID",
+      "2": "Ok",
+      "3": "取消",
+      "4": "完整值：",
+      "5": "ID：",
+      "6": "特殊值：",
+      "7": "（特殊值为 0 时，搜索将无视特殊值）"
+    },
+    "EditSelectedBlockValuesListDialog": {
+      "1": "已选中的方块",
+      "2": "移除",
+      "3": "Ok"
+    }
+  }
+}

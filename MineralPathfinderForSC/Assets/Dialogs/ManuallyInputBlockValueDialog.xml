@@ -1,0 +1,40 @@
+﻿<ManuallyInputBlockValueDialog xmlns="runtime-namespace:Game" HorizontalAlignment="Center" VerticalAlignment="Center" Size="600, 450">
+  <BevelledRectangleWidget Style="{Styles/DialogArea}" />
+  <StackPanelWidget Direction="Vertical" HorizontalAlignment="Center" VerticalAlignment="Near" Margin="20, 15">
+    <LabelWidget Text="[ManuallyInputBlockValueDialog:1]" HorizontalAlignment="Center" />
+    <CanvasWidget Size="0, 18" />
+    <StackPanelWidget Direction="Horizontal" HorizontalAlignment="Center">
+      <LabelWidget Text="[ManuallyInputBlockValueDialog:4]" VerticalAlignment="Center" />
+      <CanvasWidget>
+        <BevelledRectangleWidget Name="ValueTextBoxBorder" Size="Infinity, 40" Style="{Styles/TextBoxArea}" />
+        <TextBoxWidget Name="ValueTextBox" Size="Infinity, 40" Margin="6, 0" />
+      </CanvasWidget>
+    </StackPanelWidget>
+    <CanvasWidget Size="0, 12" />
+    <StackPanelWidget Direction="Horizontal" HorizontalAlignment="Center">
+      <LabelWidget Text="[ManuallyInputBlockValueDialog:5]" VerticalAlignment="Center" />
+      <CanvasWidget>
+        <BevelledRectangleWidget Name="ContentTextBoxBorder" Size="Infinity, 40" Style="{Styles/TextBoxArea}" />
+        <TextBoxWidget Name="ContentTextBox" Size="Infinity, 40" Margin="6, 0" />
+      </CanvasWidget>
+      <CanvasWidget Size="12, 0" />
+      <LabelWidget Text="[ManuallyInputBlockValueDialog:6]" VerticalAlignment="Center" />
+      <CanvasWidget>
+        <BevelledRectangleWidget Name="DataTextBoxBorder" Size="Infinity, 40" Style="{Styles/TextBoxArea}" />
+        <TextBoxWidget Name="DataTextBox" Size="Infinity, 40" Margin="6, 0" />
+      </CanvasWidget>
+    </StackPanelWidget>
+    <CanvasWidget Size="0, 12" />
+    <UniformSpacingPanelWidget Direction="Horizontal">
+      <BlockIconWidget Name="PreviewIcon" Size="96, 96" HorizontalAlignment="Far" Margin="4, 0" />
+      <LabelWidget Name="DisplayNameLabel" Size="Infinity, 26" VerticalAlignment="Center" Margin="4, 0" />
+    </UniformSpacingPanelWidget>
+    <CanvasWidget Size="0, 12" />
+    <LabelWidget Text="[ManuallyInputBlockValueDialog:7]" FontScale="0.7" HorizontalAlignment="Center" Color="196, 196, 196" />
+    <CanvasWidget Size="0, Infinity" />
+    <StackPanelWidget Direction="Horizontal" HorizontalAlignment="Center">
+      <BevelledButtonWidget Name="OkButton" Style="{Styles/ButtonStyle_160x60}" Text="[ManuallyInputBlockValueDialog:2]" Margin="20, 0" />
+      <BevelledButtonWidget Name="CancelButton" Style="{Styles/ButtonStyle_160x60}" Margin="20, 0" Text="[ManuallyInputBlockValueDialog:3]" />
+    </StackPanelWidget>
+  </StackPanelWidget>
+</ManuallyInputBlockValueDialog>

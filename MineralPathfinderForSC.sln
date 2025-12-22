@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{56CEAA17-38DF-0C4A-87B3-0EB8C9F36C15}") = "MineralPathfinderForSC", "MineralPathfinderForSC\MineralPathfinderForSC.csproj", "{FAC091D4-993D-B1C5-56E4-3A04E57F0A68}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FAC091D4-993D-B1C5-56E4-3A04E57F0A68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAC091D4-993D-B1C5-56E4-3A04E57F0A68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAC091D4-993D-B1C5-56E4-3A04E57F0A68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAC091D4-993D-B1C5-56E4-3A04E57F0A68}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

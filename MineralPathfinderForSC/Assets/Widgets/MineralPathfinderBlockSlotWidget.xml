@@ -1,0 +1,6 @@
+<MineralPathfinderBlockSlotWidget xmlns="runtime-namespace:Game" Size="72, 72" Margin="0, 0">
+  <RectangleWidget Name="MineralPathfinderBlockSlotWidget.Background" IsVisible="false" OutlineThickness="0" />
+  <RectangleWidget Name="MineralPathfinderBlockSlotWidget.Image" Size="40, 40" IsVisible="false" OutlineThickness="0" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" HorizontalAlignment="Center" VerticalAlignment="Center" TextureLinearFilter="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+  <BlockIconWidget Name="MineralPathfinderBlockSlotWidget.Icon" Size="64, 64" IsVisible="false" HorizontalAlignment="Center" VerticalAlignment="Center" />
+  <RectangleWidget Name="MineralPathfinderBlockSlotWidget.Star" Size="16, 16" Margin="4, 4" TextureLinearFilter="true" HorizontalAlignment="Far" VerticalAlignment="Near" Subtexture="{Textures/Gui/MineralPathfinder/Star}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 0" IsVisible="false" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+</MineralPathfinderBlockSlotWidget>

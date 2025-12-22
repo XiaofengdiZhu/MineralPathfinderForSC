@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+        <OutputType>Library</OutputType>
+        <RootNamespace>Game</RootNamespace>
+        <TargetFramework>net10.0</TargetFramework>
+        <AssemblyName>MineralPathfinder</AssemblyName>
+        <Deterministic>true</Deterministic>
+        <LangVersion>preview</LangVersion>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+        <Nullable>disable</Nullable>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateDependencyFile>false</GenerateDependencyFile>
+        <ErrorReport>prompt</ErrorReport>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DebugType>pdbonly</DebugType>
+        <OutputPath>bin\Debug\</OutputPath>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DebugType>none</DebugType>
+        <OutputPath>bin\Release\</OutputPath>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="SurvivalcraftAPI.Survivalcraft" Version="1.8.2" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Update="modinfo.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Assets\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="icon.webp">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Assets\Dialogs\EditMineralPathfinderDialog.xml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Include="Dialogs\EditMineralPathfinderDialog.cs" />
+      <Compile Include="Dialogs\EditSelectedBlockValuesListDialog.cs" />
+      <Compile Include="Dialogs\ManuallyInputBlockValueDialog.cs" />
+      <Compile Include="EmptySet.cs" />
+      <Compile Include="MineralPathfinderBlock.cs" />
+      <Compile Include="MineralPathfinderBlockData.cs" />
+      <Compile Include="MineralPathfinderElectricElement.cs" />
+      <Compile Include="SubsystemMineralPathfinderBlockBehavior.cs" />
+      <Compile Include="Widgets\MPListPanelWidget.cs" />
+      <Compile Include="Widgets\MPSelectiveFlexPanelWidget.cs" />
+      <Compile Include="Widgets\MineralPathfinderBlockSlotWidget.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Assets\Textures\Gui\MineralPathfinder\" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,60 @@
+<EditMineralPathfinderDialog xmlns="runtime-namespace:Game" HorizontalAlignment="Center" VerticalAlignment="Center">
+  <BevelledRectangleWidget BevelSize="3" />
+  <StackPanelWidget Direction="Horizontal" Margin="12, 14">
+    <StackPanelWidget Direction="Vertical">
+      <CanvasWidget Size="364, 26">
+        <LabelWidget Text="[EditMineralPathfinderDialog:1]" />
+        <StackPanelWidget Direction="Horizontal" HorizontalAlignment="Far" VerticalAlignment="Center">
+          <BitmapButtonWidget Name="SortButton" Size="26, 26" NormalSubtexture="{Textures/Gui/MineralPathfinder/Sort}" ClickedSubtexture="{Textures/Gui/MineralPathfinder/Sort}">
+            <RectangleWidget Name="Button.Rectangle" Size="26, 26" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/Sort}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+          </BitmapButtonWidget>
+          <CanvasWidget Size="12, 0" />
+          <BitmapButtonWidget Name="FilterButton" Size="26, 26" NormalSubtexture="{Textures/Gui/MineralPathfinder/CategorySearch}" ClickedSubtexture="{Textures/Gui/MineralPathfinder/CategorySearch}">
+            <RectangleWidget Name="Button.Rectangle" Size="26, 26" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/CategorySearch}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+          </BitmapButtonWidget>
+        </StackPanelWidget>
+      </CanvasWidget>
+      <CanvasWidget Size="0, 12" />
+      <CanvasWidget Name="SelectorContainer" Size="372, 248">
+        <BevelledRectangleWidget Style="{Styles/Area}" />
+        <MPSelectiveFlexPanelWidgetInt Name="SelectorPanel" Direction="Vertical" ItemSize="72, 72" SelectionColor="52, 52, 52, 52" ScrollPosition="0" Margin="4, 4" />
+      </CanvasWidget>
+      <CanvasWidget Size="0, 8" />
+      <StackPanelWidget Direction="Horizontal" HorizontalAlignment="Center">
+        <BevelledButtonWidget Name="SelectButton" Size="60, 60" Margin="2, 0" IsEnabled="false">
+          <RectangleWidget Name="SelectButtonIcon" Size="28, 28" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/AddCircle}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+        </BevelledButtonWidget>
+        <BevelledButtonWidget Name="AddToFavoritesButton" Size="60, 60" Margin="2, 0" IsEnabled="false">
+          <RectangleWidget Name="AddToFavoritesButtonIcon" Size="28, 28" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/Star}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 0" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+        </BevelledButtonWidget>
+        <BevelledButtonWidget Name="ViewDetailsButton" Size="60, 60" Margin="2, 0" IsEnabled="false">
+          <RectangleWidget Size="28, 28" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/Info}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+        </BevelledButtonWidget>
+        <BevelledButtonWidget Name="ManuallyInputButton" Size="60, 60" Margin="2, 0">
+          <RectangleWidget Size="28, 28" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/TextSelectStart}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+        </BevelledButtonWidget>
+        <BevelledButtonWidget Name="ViewListButton" Size="60, 60" Margin="2, 0">
+          <RectangleWidget Size="28, 28" TextureLinearFilter="true" HorizontalAlignment="Center" VerticalAlignment="Center" Subtexture="{Textures/Gui/MineralPathfinder/FormatListBulleted}" OutlineColor="0, 0, 0, 0" FillColor="255, 255, 255" IsVisible="true" TextureAnisotropicFilter="true" BlendState="NonPremultiplied" />
+        </BevelledButtonWidget>
+      </StackPanelWidget>
+    </StackPanelWidget>
+    <CanvasWidget Size="12,0" />
+    <StackPanelWidget Direction="Vertical">
+      <CanvasWidget Size="0, 38" />
+      <CanvasWidget Size="264, 26">
+        <LabelWidget Text="[EditMineralPathfinderDialog:3]" />
+        <LabelWidget Name="MaxResultGroupCountSliderLabel" HorizontalAlignment="Far" />
+      </CanvasWidget>
+      <SliderWidget Name="MaxResultGroupCountSlider" Size="260, 60" MinValue="1" MaxValue="8" Granularity="1" IsLabelVisible="false" />
+      <CanvasWidget Size="0, 12" />
+      <CanvasWidget Size="264, 26">
+        <LabelWidget Text="[EditMineralPathfinderDialog:4]" />
+        <LabelWidget Name="ScanRangeSliderLabel" HorizontalAlignment="Far" />
+      </CanvasWidget>
+      <SliderWidget Name="ScanRangeSlider" Size="260, 60" MinValue="0" MaxValue="7" Granularity="1" IsLabelVisible="false" />
+      <CanvasWidget Size="0, 12" />
+      <CheckboxWidget Name="ShowIndicatorCheckbox" Text="[EditMineralPathfinderDialog:5]" />"
+    </StackPanelWidget>
+  </StackPanelWidget>
+  <LabelWidget Name="MessageLabel" IsVisible="false" HorizontalAlignment="Center" VerticalAlignment="Far" />
+</EditMineralPathfinderDialog>

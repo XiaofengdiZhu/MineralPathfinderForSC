@@ -1,0 +1,13 @@
+<EditSelectedBlockValuesListDialog xmlns="runtime-namespace:Game" HorizontalAlignment="Center" VerticalAlignment="Center" Size="500, 450">
+  <BevelledRectangleWidget Style="{Styles/DialogArea}" />
+  <StackPanelWidget Direction="Vertical" HorizontalAlignment="Center" VerticalAlignment="Near" Margin="20, 15">
+    <LabelWidget Text="[EditSelectedBlockValuesListDialog:1]" HorizontalAlignment="Center" />
+    <CanvasWidget Size="0, 18" />
+    <MPListPanelWidgetInt Name="ListPanel" Direction="Vertical" ItemSize="72" SelectionColor="10, 70, 0, 90" />
+    <CanvasWidget Size="0, 12" />
+    <StackPanelWidget Direction="Horizontal" HorizontalAlignment="Center">
+      <BevelledButtonWidget Name="RemoveButton" Style="{Styles/ButtonStyle_160x60}" Text="[EditSelectedBlockValuesListDialog:2]" IsEnabled="false" Margin="20, 0" />
+      <BevelledButtonWidget Name="OkButton" Style="{Styles/ButtonStyle_160x60}" Text="[EditSelectedBlockValuesListDialog:3]" Margin="20, 0" />
+    </StackPanelWidget>
+  </StackPanelWidget>
+</EditSelectedBlockValuesListDialog>

@@ -1,0 +1,65 @@
+{
+  "SubsystemMineralPathfinderBlockBehavior": {
+    "1": "There is already a scan in progress",
+    "2": "Scan too frequently",
+    "3": "Scan successful. {0} groups of results",
+    "4": "No Result"
+  },
+  "EditMineralPathfinderDialog": {
+    "1": "Sort Order",
+    "2": "Filter",
+    "3": "Invalid Block Contents (1-1023)",
+    "4": " (Supports RegExp)",
+    "5": "Added to Favorites",
+    "6": "Removed from Favorites",
+    "7": "Last Sleep Position",
+    "8": "Last Death Position",
+    "SortOrder": {
+      "DisplayOrderAscending": "Display Order Ascending",
+      "DisplayOrderDescending": "Display Order Descending",
+      "ContentsAscending": "Contents Ascending",
+      "ContentsDescending": "Contents Descending",
+      "NameAscending": "Name Ascending",
+      "NameDescending": "Name Descending"
+    },
+    "FilterMethod": {
+      "All": "All",
+      "Name": "Search Name",
+      "Contents": "Search Block Contents",
+      "Favorite": "Favorite"
+    }
+  },
+  "ManuallyInputBlockValueDialog": {
+    "1": "Invalid input"
+  },
+  "Blocks": {
+    "MineralPathfinderBlock:0": {
+      "DisplayName": "Mineral Pathfinder",
+      "Description": "",
+      "CRDescription:0": "Make a Mineral Pathfinder from 9 kinds of mineral chunks"
+    }
+  },
+  "ContentWidgets": {
+    "EditMineralPathfinderDialog": {
+      "1": "Mineral Pathfinder",
+      "2": "Select",
+      "3": "Result Group Count",
+      "4": "Scan Range",
+      "5": "Show Indicator"
+    },
+    "ManuallyInputBlockValueDialog": {
+      "1": "Manually Input Block Value",
+      "2": "Ok",
+      "3": "Cancel",
+      "4": "Value: ",
+      "5": "Contents: ",
+      "6": "Data: ",
+      "7": "(When data is zero, the pathfinder will ignore data.)"
+    },
+    "EditSelectedBlockValuesListDialog": {
+      "1": "Selected Blocks",
+      "2": "Remove",
+      "3": "Ok"
+    }
+  }
+}

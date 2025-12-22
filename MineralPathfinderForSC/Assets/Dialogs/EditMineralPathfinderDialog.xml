@@ -41,13 +41,13 @@
     <CanvasWidget Size="12,0" />
     <StackPanelWidget Direction="Vertical">
       <CanvasWidget Size="0, 38" />
-      <CanvasWidget Size="264, 26">
+      <CanvasWidget Size="250, 26">
         <LabelWidget Text="[EditMineralPathfinderDialog:3]" />
         <LabelWidget Name="MaxResultGroupCountSliderLabel" HorizontalAlignment="Far" />
       </CanvasWidget>
       <SliderWidget Name="MaxResultGroupCountSlider" Size="260, 60" MinValue="1" MaxValue="8" Granularity="1" IsLabelVisible="false" />
       <CanvasWidget Size="0, 12" />
-      <CanvasWidget Size="264, 26">
+      <CanvasWidget Size="250, 26">
         <LabelWidget Text="[EditMineralPathfinderDialog:4]" />
         <LabelWidget Name="ScanRangeSliderLabel" HorizontalAlignment="Far" />
       </CanvasWidget>

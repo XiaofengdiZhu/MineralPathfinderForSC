@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Engine;
 using Engine.Graphics;
@@ -200,8 +199,7 @@ namespace Game {
                     }
                 }
                 foreach ((CellFace cellFace, BlockValueAndCount pair) in data.ResultVeins) {
-                    Vector3 faceDirection = CellFace.FaceToVector3(cellFace.Face);
-                    Vector3 position = new Vector3(cellFace.X + 0.5f, cellFace.Y + 0.5f, cellFace.Z + 0.5f) + faceDirection * 0.6f;
+                    Vector3 position = cellFace.GetFaceCenter(0.1f);
                     if (!camera.ViewFrustum.Intersection(position)) {
                         continue;
                     }
@@ -220,15 +218,6 @@ namespace Game {
             GLWrapper.GL.LineWidth(lineWidth);
             m_lastDrawTime = time;
         }
-
-        static readonly int[][] Tangents = [
-            [1, 3, 4, 5], // Normal +Z
-            [0, 2, 4, 5], // Normal +X
-            [1, 3, 4, 5], // Normal -Z
-            [0, 2, 4, 5], // Normal -X
-            [0, 1, 2, 3], // Normal +Y
-            [0, 1, 2, 3] // Normal -Y
-        ];
 
         /// <summary>
         ///     扫描获取所有结果，并获取路径
@@ -267,7 +256,7 @@ namespace Game {
             if (data.SleepSelected) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     Point3 point3 = Terrain.ToCell(componentPlayer.PlayerData.SpawnPosition);
-                    if (m_terrain.GetCellContents(point3.X, point3.Y, point3.Z) == 0
+                    if (m_terrain.GetCellContents(point3) == 0
                         && m_terrain.GetCellContents(point3.X, point3.Y - 1, point3.Z) != 0) {
                         data.ResultVeins.Add(new CellFace(point3.X, point3.Y - 1, point3.Z, 4), new BlockValueAndCount(-1, 1));
                     }
@@ -277,7 +266,7 @@ namespace Game {
                 foreach (PlayerStats playerStats in m_subsystemPlayerStats.m_playerStats.Values) {
                     if (playerStats.DeathRecords.Count > 0) {
                         Point3 point3 = Terrain.ToCell(playerStats.DeathRecords.Last().Location);
-                        if (m_terrain.GetCellContents(point3.X, point3.Y, point3.Z) == 0
+                        if (m_terrain.GetCellContents(point3) == 0
                             && m_terrain.GetCellContents(point3.X, point3.Y - 1, point3.Z) != 0) {
                             data.ResultVeins.Add(new CellFace(point3.X, point3.Y - 1, point3.Z, 4), new BlockValueAndCount(-1, 1));
                         }
@@ -329,14 +318,14 @@ namespace Game {
             for (int i = 0; i < 6; i++) {
                 Point3 neighbor = start + CellFace.FaceToPoint3(i);
                 if (IsValidAir(neighbor)) {
-                    toVisiteQueue.Enqueue(new CellFace(start.X, start.Y, start.Z, i));
+                    toVisiteQueue.Enqueue(new CellFace(start, i));
                 }
             }
             while (toVisiteQueue.Count > 0) {
                 CellFace current = toVisiteQueue.Dequeue();
                 Point3 currentPoint3 = current.Point;
                 // 检查方块是否有效
-                int currentBlockValue = Terrain.ReplaceLight(m_terrain.GetCellValueFast(currentPoint3.X, currentPoint3.Y, currentPoint3.Z), 0);
+                int currentBlockValue = Terrain.ReplaceLight(m_terrain.GetCellValueFast(currentPoint3), 0);
                 if (currentBlockValue == 0) {
                     continue; // 如果变成了空气（可能被其他逻辑修改），跳过
                 }
@@ -392,7 +381,7 @@ namespace Game {
                 for (int i = 0; i < 6; i++) {
                     Point3 neighbor = current + CellFace.FaceToPoint3(i);
                     // 基础检查
-                    if (!m_terrain.IsCellValid(neighbor.X, neighbor.Y, neighbor.Z)) {
+                    if (!m_terrain.IsCellValid(neighbor)) {
                         continue;
                     }
                     // 已经在全局扫描列表中，跳过（避免重复计数和死循环）
@@ -426,7 +415,7 @@ namespace Game {
             List<CellFace> result = new(4);
             Point3 currentPoint3 = current.Point;
             Point3 direction = CellFace.FaceToPoint3(current.Face);
-            foreach (int tangent in Tangents[current.Face]) {
+            foreach (int tangent in CellFace.FaceToTangents(current.Face)) {
                 Point3 tangentPoint3 = CellFace.FaceToPoint3(tangent);
                 Point3 neighbor = currentPoint3 + tangentPoint3;
                 if (rangeSquared != float.PositiveInfinity
@@ -438,12 +427,12 @@ namespace Game {
                 if (IsValidNotAir(diagonal)) {
                     // 检查对角块是否是个有效的落脚点 (其实 IsValidNotAir 已经检查了一部分)
                     // 这里的面是 OpposideFace(tangent)
-                    result.Add(new CellFace(diagonal.X, diagonal.Y, diagonal.Z, CellFace.OppositeFace(tangent)));
+                    result.Add(new CellFace(diagonal, CellFace.OppositeFace(tangent)));
                     continue;
                 }
 
                 // 检查邻居本身是否越界或未加载
-                if (!m_terrain.IsCellValid(neighbor.X, neighbor.Y, neighbor.Z)) {
+                if (!m_terrain.IsCellValid(neighbor)) {
                     continue;
                 }
                 TerrainChunk neighborChunk = m_terrain.GetChunkAtCell(neighbor.X, neighbor.Z);
@@ -456,10 +445,10 @@ namespace Game {
                     neighborContent == 0
                         // 2. 凸角 (Convex) - 绕过棱角
                         // 邻居是空气，说明路断了，需要翻过棱。面变成当前块的 tangent 面
-                        ? new CellFace(currentPoint3.X, currentPoint3.Y, currentPoint3.Z, tangent)
+                        ? new CellFace(currentPoint3, tangent)
                         // 3. 平面 (Flat) - 平地走
                         // 邻居是方块，可以直接走过去。面保持 current.Face
-                        : new CellFace(neighbor.X, neighbor.Y, neighbor.Z, current.Face)
+                        : new CellFace(neighbor, current.Face)
                 );
             }
             return result;
@@ -479,7 +468,7 @@ namespace Game {
             for (int i = 0; i < 6; i++) {
                 Point3 neighbor = start + CellFace.FaceToPoint3(i);
                 if (IsValidAir(neighbor)) {
-                    initialStartFaces.Add(new CellFace(start.X, start.Y, start.Z, i));
+                    initialStartFaces.Add(new CellFace(start, i));
                 }
             }
             if (initialStartFaces.Count == 0) {
@@ -694,7 +683,7 @@ namespace Game {
         ///     是否是有效的空气方块
         /// </summary>
         bool IsValidAir(Point3 p) {
-            if (!m_terrain.IsCellValid(p.X, p.Y, p.Z)) {
+            if (!m_terrain.IsCellValid(p)) {
                 return false;
             }
             TerrainChunk chunk = m_terrain.GetChunkAtCell(p.X, p.Z);

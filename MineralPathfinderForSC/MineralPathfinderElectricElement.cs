@@ -9,12 +9,12 @@ namespace Game {
         public MineralPathfinderElectricElement(SubsystemElectricity subsystemElectricity, Point3 point) : base(
             subsystemElectricity,
             [
-                new CellFace(point.X, point.Y, point.Z, 0),
-                new CellFace(point.X, point.Y, point.Z, 1),
-                new CellFace(point.X, point.Y, point.Z, 2),
-                new CellFace(point.X, point.Y, point.Z, 3),
-                new CellFace(point.X, point.Y, point.Z, 4),
-                new CellFace(point.X, point.Y, point.Z, 5)
+                new CellFace(point, 0),
+                new CellFace(point, 1),
+                new CellFace(point, 2),
+                new CellFace(point, 3),
+                new CellFace(point, 4),
+                new CellFace(point, 5)
             ]
         ) => m_blockBehavior = subsystemElectricity.Project.FindSubsystem<SubsystemMineralPathfinderBlockBehavior>();
 

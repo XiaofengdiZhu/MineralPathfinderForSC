@@ -35,7 +35,7 @@
   "Blocks": {
     "MineralPathfinderBlock:0": {
       "DisplayName": "Mineral Pathfinder",
-      "Description": "",
+      "Description": "You can use it to scan mineral or any other blocks. Place it on the ground and connect it to a button or other power source; each time it receives a high signal, it performs a scan. It will only scan for exposed targets on the ground or walls, and cannot find targets hidden in rocks or unreachable targets. When the targets are successfully found, it draws a thin and bright yellow line on the ground, leading to the destination (the line will be cleared when you leave the world). You can adjust its settings via the edit dialog.",
       "CRDescription:0": "Make a Mineral Pathfinder from 9 kinds of mineral chunks"
     }
   },

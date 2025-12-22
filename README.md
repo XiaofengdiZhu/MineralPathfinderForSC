@@ -4,6 +4,7 @@
 
 This mod adds a new block: the Mineral Pathfinder.  
 You can make a Mineral Pathfinder from 9 kinds of mineral chunks on a crafting table. Place it on the ground and connect it to a button or other power source; each time it receives a high signal, it performs a scan.  
+It will only scan for exposed targets on the ground or walls, and cannot find targets hidden in rocks or unreachable targets.  
 When the targets are successfully found, it draws a thin and bright yellow line on the ground, leading to the destination (the line will be cleared when you leave the world).  
 You can adjust its settings via the edit dialog.
 
@@ -24,8 +25,9 @@ On the right side of the dialog, there are three settings:
 3. Show Indicator: whether to display a moving arrow indicator along the path to indicate the direction. Enabled by default.
 
 本模组添加了一个新方块：寻矿器  
-使用 9 种矿物在工作台合成，摆放在地面上，接上按钮或其他电路元件，每当收到高电平信号时，会进行一次寻矿  
-成功寻找到矿物后，它将沿着地面绘制一条亮黄色的细线，通往目的地（退出存档会清除细线）
+使用 9 种矿物在工作台合成，摆放在地面上，接上按钮或其他电路元件，每当收到高电平信号时，会进行一次扫描  
+它只会沿着地面、墙面寻找暴露在空气中的目标，无法寻找到隐藏在岩石中，和无法抵达的目标  
+成功寻找到目标后，它将沿着地面绘制一条亮黄色的细线，通往目的地（退出存档会清除细线）
 你可以通过“编辑”来调整它的设置
 
 你可以在设置对话框的左半边选择要扫描的目标矿物，或其他任何目标方块，以及上次睡觉地点和上次死亡地点    

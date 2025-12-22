@@ -218,6 +218,7 @@ namespace Game {
                 }
                 if (m_addToFavoritesButton.IsClicked) {
                     if (m_blockBehavior.FavoriteTargets.Remove(selectedBlockValue)) {
+                        m_addToFavoritesButtonIcon.Subtexture = ContentManager.Get<Subtexture>("Textures/Gui/MineralPathfinder/StarFilled");
                         m_addToFavoritesButtonIcon.FillColor = Color.Yellow;
                         if (m_selectorPanel.SelectedIndex.HasValue
                             && m_selectorPanel.m_widgetsByIndex.TryGetValue(m_selectorPanel.SelectedIndex.Value, out Widget widget)
@@ -226,6 +227,7 @@ namespace Game {
                         }
                     }
                     else if (m_blockBehavior.FavoriteTargets.Add(selectedBlockValue)) {
+                        m_addToFavoritesButtonIcon.Subtexture = ContentManager.Get<Subtexture>("Textures/Gui/MineralPathfinder/Star");
                         m_addToFavoritesButtonIcon.FillColor = Color.Gray;
                         if (m_selectorPanel.SelectedIndex.HasValue
                             && m_selectorPanel.m_widgetsByIndex.TryGetValue(m_selectorPanel.SelectedIndex.Value, out Widget widget)
@@ -301,7 +303,9 @@ namespace Game {
                 m_messageLabel.Text = string.Empty;
                 m_messageLabel.IsVisible = false;
             }
-            if (Input.Cancel) {
+            if (Input.Back
+                || Input.Cancel
+                || (Input.Tap.HasValue && !HitTest(Input.Tap.Value))) {
                 DialogsManager.HideDialog(this);
             }
         }
@@ -429,6 +433,7 @@ namespace Game {
                         m_selectButtonIcon.FillColor = Color.White;
                     }
                     m_selectButton.IsEnabled = true;
+                    m_addToFavoritesButtonIcon.Subtexture = ContentManager.Get<Subtexture>("Textures/Gui/MineralPathfinder/Star");
                     m_addToFavoritesButtonIcon.FillColor = Color.Gray;
                     m_addToFavoritesButton.IsEnabled = false;
                     m_viewDetailsButton.IsEnabled = true;
@@ -443,6 +448,7 @@ namespace Game {
                         m_selectButtonIcon.FillColor = Color.White;
                     }
                     m_selectButton.IsEnabled = true;
+                    m_addToFavoritesButtonIcon.Subtexture = ContentManager.Get<Subtexture>("Textures/Gui/MineralPathfinder/Star");
                     m_addToFavoritesButtonIcon.FillColor = Color.Gray;
                     m_addToFavoritesButton.IsEnabled = false;
                     m_viewDetailsButton.IsEnabled = true;
@@ -459,7 +465,14 @@ namespace Game {
                         m_selectButtonIcon.FillColor = Color.White;
                     }
                     m_selectButton.IsEnabled = true;
-                    m_addToFavoritesButtonIcon.FillColor = m_blockBehavior.FavoriteTargets.Contains(blockValue) ? Color.Gray : Color.Yellow;
+                    if (m_blockBehavior.FavoriteTargets.Contains(blockValue)) {
+                        m_addToFavoritesButtonIcon.Subtexture = ContentManager.Get<Subtexture>("Textures/Gui/MineralPathfinder/Star");
+                        m_addToFavoritesButtonIcon.FillColor = Color.Gray;
+                    }
+                    else {
+                        m_addToFavoritesButtonIcon.Subtexture = ContentManager.Get<Subtexture>("Textures/Gui/MineralPathfinder/StarFilled");
+                        m_addToFavoritesButtonIcon.FillColor = Color.Yellow;
+                    }
                     m_addToFavoritesButton.IsEnabled = true;
                     m_viewDetailsButton.IsEnabled = true;
                     break;

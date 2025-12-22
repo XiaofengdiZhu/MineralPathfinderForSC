@@ -23,5 +23,7 @@ namespace Game {
             int z) => ElectricConnectorType.Input;
 
         public int GetConnectionMask(int value) => int.MaxValue;
+
+        public override bool IsNonDuplicable_(int value) => Terrain.ExtractData(value) > 0;
     }
 }

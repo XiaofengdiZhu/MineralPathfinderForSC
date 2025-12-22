@@ -185,7 +185,7 @@ namespace Game {
                                     break;
                                 case 0: break;
                                 case > 0:
-                                    /*BlocksManager.Blocks[Terrain.ExtractContents(data.ResultPathIndicatorBlockValue)]
+                                    BlocksManager.Blocks[Terrain.ExtractContents(data.ResultPathIndicatorBlockValue)]
                                         .DrawBlock(
                                             m_primitivesRenderer3D,
                                             data.ResultPathIndicatorBlockValue,
@@ -193,7 +193,7 @@ namespace Game {
                                             0.2f,
                                             ref matrix,
                                             m_drawBlockEnvironmentData
-                                        );*/ break;
+                                        ); break;
                             }
                         }
                     }
@@ -209,7 +209,7 @@ namespace Game {
                             new Vector3((viewDirection.X > 0 ? 1 : -1) * (viewDirection.Y < 0 ? 1 : -1), 0, 0) :
                             new Vector3(0, 0, (viewDirection.Z > 0 ? 1 : -1) * (viewDirection.Y < 0 ? 1 : -1));
                     Vector3 right = Vector3.Cross(forward, up);
-                    //m_fontBatch3D.QueueText(pair.Count.ToString("D"), position, right * -0.02f, up * -0.02f, Color.White, TextAnchor.Center);
+                    m_fontBatch3D.QueueText(pair.Count.ToString("D"), position, right * -0.02f, up * -0.02f, Color.White, TextAnchor.Center);
                 }
             }
             GLWrapper.GL.GetFloat(GetPName.LineWidth, out float lineWidth);
@@ -234,13 +234,13 @@ namespace Game {
                 }
                 return;
             }
-            m_isScanning = true;
             if (DateTime.Now - m_lastScanTime < TimeSpan.FromSeconds(1)) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "2"), Color.White, false, true);
                 }
                 return;
             }
+            m_isScanning = true;
             m_lastScanTime = DateTime.Now;
             data.ResetResults();
             ScanBlocks(
@@ -422,19 +422,29 @@ namespace Game {
                     && Vector3.DistanceSquared(neighbor, currentPoint3) > rangeSquared) {
                     continue;
                 }
-                Point3 diagonal = neighbor + direction;
                 // 1. 凹角 (Concave) - 墙角拐上去
-                if (IsValidNotAir(diagonal)) {
+                Point3 diagonal = neighbor + direction;
+                if (!m_terrain.IsCellValid(diagonal)) {
+                    continue;
+                }
+                TerrainChunk diagonalChunk = m_terrain.GetChunkAtCell(diagonal.X, diagonal.Z);
+                if (diagonalChunk == null
+                    || diagonalChunk.ThreadState < TerrainChunkState.InvalidLight) {
+                    continue;
+                }
+                int diagonalContent = diagonalChunk.GetCellContentsFast(diagonal.X & 15, diagonal.Y, diagonal.Z & 15);
+                if (diagonalContent != 0) {
                     // 检查对角块是否是个有效的落脚点 (其实 IsValidNotAir 已经检查了一部分)
                     // 这里的面是 OpposideFace(tangent)
                     result.Add(new CellFace(diagonal, CellFace.OppositeFace(tangent)));
                     continue;
                 }
 
+                //实际不需要，因为对角无效时邻居肯定也无效
                 // 检查邻居本身是否越界或未加载
-                if (!m_terrain.IsCellValid(neighbor)) {
+                /*if (!m_terrain.IsCellValid(neighbor)) {
                     continue;
-                }
+                }*/
                 TerrainChunk neighborChunk = m_terrain.GetChunkAtCell(neighbor.X, neighbor.Z);
                 if (neighborChunk == null
                     || neighborChunk.ThreadState < TerrainChunkState.InvalidLight) {
@@ -668,7 +678,7 @@ namespace Game {
         ///     是否是有效的实体方块
         /// </summary>
         bool IsValidNotAir(Point3 p) {
-            if (!m_terrain.IsCellValid(p.X, p.Y, p.Z)) {
+            if (!m_terrain.IsCellValid(p)) {
                 return false;
             }
             TerrainChunk chunk = m_terrain.GetChunkAtCell(p.X, p.Z);

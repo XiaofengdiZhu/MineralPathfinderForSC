@@ -102,7 +102,9 @@ namespace Game {
                 }
             }
             if (Input.Cancel
-                || m_cancelButton.IsClicked) {
+                || Input.Back
+                || m_cancelButton.IsClicked
+                || (Input.Tap.HasValue && !HitTest(Input.Tap.Value))) {
                 Dismiss(0);
             }
         }

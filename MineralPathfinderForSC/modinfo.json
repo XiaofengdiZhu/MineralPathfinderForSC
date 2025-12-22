@@ -2,7 +2,7 @@
   "Name": "Mineral Pathfinder 寻矿器",
   "Version": "0.1",
   "ApiVersion": "1.8.2.2",
-  "Description": "",
+  "Description": "Scan mineral blocks, and show the path to them. 扫描矿物方块，并显示通往它的路径。",
   "ScVersion": "2.4.0.0",
   "Link": "https://github.com/XiaofengdiZhu/MineralPathfinderForSC",
   "Author": "销锋镝铸 XiaofengdiZhu",

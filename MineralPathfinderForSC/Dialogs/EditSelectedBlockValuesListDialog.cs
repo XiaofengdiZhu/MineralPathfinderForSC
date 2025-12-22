@@ -67,7 +67,9 @@ namespace Game {
                 }
             }
             if (Input.Cancel
-                || m_okButton.IsClicked) {
+                || Input.Back
+                || m_okButton.IsClicked
+                || (Input.Tap.HasValue && !HitTest(Input.Tap.Value))) {
                 DialogsManager.HideDialog(this);
                 m_handler(m_isChanged);
             }

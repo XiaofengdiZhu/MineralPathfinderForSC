@@ -156,12 +156,11 @@ namespace Game {
             IsDrawRequired = true;
             foreach (Widget child in Children) {
                 if (child.IsVisible) {
-                    // TODO: 适配新API
                     if (Direction == LayoutDirection.Horizontal) {
-                        child.Measure(new Vector2(ItemSize, MathUtils.Max(parentAvailableSize.Y - 2f * child.Margin.Y, 0f)));
+                        child.Measure(new Vector2(ItemSize, MathUtils.Max(parentAvailableSize.Y - child.MarginVerticalSum, 0f)));
                     }
                     else {
-                        child.Measure(new Vector2(MathUtils.Max(parentAvailableSize.X - 2f * child.Margin.X, 0f), ItemSize));
+                        child.Measure(new Vector2(MathUtils.Max(parentAvailableSize.X - child.MarginHorizontalSum, 0f), ItemSize));
                     }
                 }
             }

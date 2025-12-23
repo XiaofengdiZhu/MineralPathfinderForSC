@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
+using System.Threading.Tasks;
 using Engine;
 
 namespace Game {
-    public class MineralPathfinderBlockData : IEditableItemData, IDisposable {
+    public class MineralPathfinderBlockData : IEditableItemData, IAsyncDisposable {
         public enum IndicatorType {
             None,
             Triangle, //只有三角形指示器
@@ -37,7 +38,7 @@ namespace Game {
         //默认目标为矿物
         public ISet<int> ContentsTargets => m_contentsTargets ?? DefaultContentsTargets;
 
-        public static EmptySet<int> EmptyIntSet = new();
+        public static ImmutableHashSet<int> EmptyIntSet = ImmutableHashSet<int>.Empty;
 
         public ISet<int> m_valueTargets;
         public ISet<int> ValueTargets => m_valueTargets ?? EmptyIntSet;
@@ -77,7 +78,7 @@ namespace Game {
             set => m_showIndicator = value;
         }
 
-        public readonly Dictionary<CellFace, BlockValueAndCount> m_resultVeins = [];
+        public Dictionary<CellFace, BlockValueAndCount> m_resultVeins = [];
 
         public Dictionary<CellFace, BlockValueAndCount> ResultVeins => m_resultVeins;
 
@@ -422,6 +423,10 @@ namespace Game {
             m_resultPathIndicatorTimeToBlockValue.Clear();
         }
 
+        public void ScannedSuccessfully() {
+            _ = ResultPathStripe;
+        }
+
         public static bool IsDefault(MineralPathfinderBlockData data) => data.m_contentsTargets == null
             && data.m_valueTargets == null
             && data.m_maxResultGroupCount == 1
@@ -430,10 +435,11 @@ namespace Game {
             && !data.m_sleepSelected
             && !data.m_deathSelected;
 
-        public void Dispose() {
+        public ValueTask DisposeAsync() {
             m_contentsTargets?.Clear();
             m_valueTargets?.Clear();
             ResetResults();
+            return ValueTask.CompletedTask;
         }
     }
 }

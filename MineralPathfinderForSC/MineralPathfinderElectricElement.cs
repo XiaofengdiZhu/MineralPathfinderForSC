@@ -1,4 +1,5 @@
-﻿using Engine;
+﻿using System.Threading.Tasks;
+using Engine;
 
 namespace Game {
     public class MineralPathfinderElectricElement : ElectricElement {
@@ -32,7 +33,12 @@ namespace Game {
                 if (m_isHighVoltage) {
                     Point3 start = CellFaces[0].Point;
                     MineralPathfinderBlockData data = m_blockBehavior.GetBlockData(start);
-                    m_blockBehavior.Scan(start, data);
+                    if (data == m_blockBehavior.m_scanningData) {
+                        m_blockBehavior.CancelScan();
+                    }
+                    else if (m_blockBehavior.PrepareForScan(data)) {
+                        Task.Run(() => m_blockBehavior.ScanAsync(start, data).ConfigureAwait(false));
+                    }
                 }
             }
             return false;

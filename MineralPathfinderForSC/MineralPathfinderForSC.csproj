@@ -43,7 +43,6 @@
       <Compile Include="Dialogs\EditMineralPathfinderDialog.cs" />
       <Compile Include="Dialogs\EditSelectedBlockValuesListDialog.cs" />
       <Compile Include="Dialogs\ManuallyInputBlockValueDialog.cs" />
-      <Compile Include="EmptySet.cs" />
       <Compile Include="MineralPathfinderBlock.cs" />
       <Compile Include="MineralPathfinderBlockData.cs" />
       <Compile Include="MineralPathfinderElectricElement.cs" />

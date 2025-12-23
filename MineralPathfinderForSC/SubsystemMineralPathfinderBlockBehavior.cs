@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Engine;
 using Engine.Graphics;
 using Silk.NET.OpenGLES;
@@ -9,13 +11,24 @@ using BlockValueAndCount = Game.MineralPathfinderBlockData.BlockValueAndCount;
 using IndicatorType = Game.MineralPathfinderBlockData.IndicatorType;
 
 namespace Game {
-    public class SubsystemMineralPathfinderBlockBehavior : SubsystemEditableItemBehavior<MineralPathfinderBlockData>, IDrawable {
+    public class SubsystemMineralPathfinderBlockBehavior : SubsystemEditableItemBehavior<MineralPathfinderBlockData>, IUpdateable, IDrawable {
+        public enum ScanStatus {
+            NotStarted,
+            Completed,
+            Canceled,
+            ScanningBlocks,
+            FindingPath
+        }
+
         public SubsystemTerrain m_subsystemTerrain;
         public SubsystemPlayers m_subsystemPlayers;
         public SubsystemPlayerStats m_subsystemPlayerStats;
         public Terrain m_terrain;
-        public bool m_isScanning;
+        public volatile ScanStatus m_scanStatus = ScanStatus.NotStarted;
         public DateTime m_lastScanTime = DateTime.MinValue;
+        public volatile MineralPathfinderBlockData m_scanningData;
+        public CancellationTokenSource m_cancelSource;
+        public TaskCompletionSource<bool> m_continueSource;
         public double m_lastDrawTime;
         public readonly PrimitivesRenderer3D m_primitivesRenderer3D = new();
         public FontBatch3D m_fontBatch3D;
@@ -25,12 +38,15 @@ namespace Game {
         public readonly DrawBlockEnvironmentData m_drawBlockEnvironmentData = new();
         public readonly HashSet<int> PlaceableBlockContents = [];
         public readonly HashSet<int> FavoriteTargets = [];
+        public static Color[] ScanProgressColors = [new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)32)];
         public static Color PathStripeColor = new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)128);
         public static Color PathIndicatorColor = new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)192);
         public const float PathIndicatorSpeed = 3f;
         public const string fName = "SubsystemMineralPathfinderBlockBehavior";
 
         public int[] DrawOrders => [299];
+
+        public UpdateOrder UpdateOrder => UpdateOrder.BlockHighlight;
         public override int[] HandledBlocks => [BlocksManager.GetBlockIndex<MineralPathfinderBlock>()];
 
         public SubsystemMineralPathfinderBlockBehavior() : base(BlocksManager.GetBlockIndex<MineralPathfinderBlock>()) { }
@@ -79,7 +95,6 @@ namespace Game {
                 return false;
             }
             int value = inventory.GetSlotValue(slotIndex);
-            int count = inventory.GetSlotCount(slotIndex);
             int id = Terrain.ExtractData(value);
             MineralPathfinderBlockData data = (MineralPathfinderBlockData)GetItemData(id)?.Copy() ?? new MineralPathfinderBlockData();
             DialogsManager.ShowDialog(componentPlayer.GuiWidget, new EditMineralPathfinderDialog(this, componentPlayer, data));
@@ -89,6 +104,9 @@ namespace Game {
         public override bool OnEditBlock(int x, int y, int z, int value, ComponentPlayer componentPlayer) {
             MineralPathfinderBlockData data = GetBlockData(new Point3(x, y, z));
             if (data != null) {
+                if (data == m_scanningData) {
+                    componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "5"), Color.White, false, false);
+                }
                 DialogsManager.ShowDialog(componentPlayer.GuiWidget, new EditMineralPathfinderDialog(this, componentPlayer, data));
             }
             return true;
@@ -103,30 +121,40 @@ namespace Game {
             MineralPathfinderBlockData itemData = GetItemData(id);
             if (itemData != null) {
                 m_blocksData[new Point3(x, y, z)] = (MineralPathfinderBlockData)itemData.Copy();
-                itemData.Dispose();
+                itemData.DisposeAsync();
             }
         }
 
         public override void OnItemHarvested(int x, int y, int z, int blockValue, ref BlockDropValue dropValue, ref int newBlockValue) {
             MineralPathfinderBlockData blockData = GetBlockData(new Point3(x, y, z));
-            if (blockData != null
-                && !MineralPathfinderBlockData.IsDefault(blockData)) {
-                int num = FindFreeItemId();
-                m_itemsData.Add(num, (MineralPathfinderBlockData)blockData.Copy());
-                dropValue.Value = Terrain.ReplaceData(dropValue.Value, num);
-                blockData.Dispose();
+            if (blockData != null) {
+                if (blockData == m_scanningData) {
+                    CancelScan();
+                }
+                if (!MineralPathfinderBlockData.IsDefault(blockData)) {
+                    int num = FindFreeItemId();
+                    m_itemsData.Add(num, (MineralPathfinderBlockData)blockData.Copy());
+                    dropValue.Value = Terrain.ReplaceData(dropValue.Value, num);
+                    blockData.DisposeAsync();
+                }
             }
         }
 
         public void Draw(Camera camera, int drawOrder) {
             double time = Time.RealTime;
+            m_lastDrawTime = time;
+            float deltaTime = (float)(time - m_lastDrawTime);
             Vector3 viewDirection = camera.ViewDirection;
-            foreach ((_, MineralPathfinderBlockData data) in m_blocksData) {
+            foreach ((Point3 position, MineralPathfinderBlockData data) in m_blocksData) {
+                if (data == m_scanningData) {
+                    m_flatBatch3D.QueueCube(new Vector3(position.X + 0.5f, position.Y + 0.5f, position.Z + 0.5f), 1.1f, ScanProgressColors[0]);
+                    continue;
+                }
                 if (data.ResultVeins.Count == 0) {
                     continue;
                 }
                 m_flatBatch3D.QueueLineStrip(data.ResultPathStripe, PathStripeColor);
-                data.ResultPathIndicatorTime += (float)(time - m_lastDrawTime) * PathIndicatorSpeed;
+                data.ResultPathIndicatorTime += deltaTime * PathIndicatorSpeed;
                 if (data.ShowIndicator) {
                     Vector3[] indicatorVertices = data.ResultPathIndicatorTriangleVertices;
                     if (indicatorVertices != null
@@ -199,8 +227,8 @@ namespace Game {
                     }
                 }
                 foreach ((CellFace cellFace, BlockValueAndCount pair) in data.ResultVeins) {
-                    Vector3 position = cellFace.GetFaceCenter(0.1f);
-                    if (!camera.ViewFrustum.Intersection(position)) {
+                    Vector3 center = cellFace.GetFaceCenter(0.1f);
+                    if (!camera.ViewFrustum.Intersection(center)) {
                         continue;
                     }
                     Vector3 forward = CellFace.FaceToVector3(cellFace.Face);
@@ -209,41 +237,55 @@ namespace Game {
                             new Vector3((viewDirection.X > 0 ? 1 : -1) * (viewDirection.Y < 0 ? 1 : -1), 0, 0) :
                             new Vector3(0, 0, (viewDirection.Z > 0 ? 1 : -1) * (viewDirection.Y < 0 ? 1 : -1));
                     Vector3 right = Vector3.Cross(forward, up);
-                    m_fontBatch3D.QueueText(pair.Count.ToString("D"), position, right * -0.02f, up * -0.02f, Color.White, TextAnchor.Center);
+                    m_fontBatch3D.QueueText(pair.Count.ToString("D"), center, right * -0.02f, up * -0.02f, Color.White, TextAnchor.Center);
                 }
             }
             GLWrapper.GL.GetFloat(GetPName.LineWidth, out float lineWidth);
             GLWrapper.GL.LineWidth(4f);
             m_primitivesRenderer3D.Flush(camera.ViewProjectionMatrix);
             GLWrapper.GL.LineWidth(lineWidth);
-            m_lastDrawTime = time;
         }
 
-        /// <summary>
-        ///     扫描获取所有结果，并获取路径
-        /// </summary>
-        public void Scan(Point3 start, MineralPathfinderBlockData data) {
+        public void Update(float dt) {
+            ContinueScan();
+        }
+
+        public bool PrepareForScan(MineralPathfinderBlockData data) {
             if (data.MaxResultGroupCount < 1
                 || data.ScanRange <= 0
                 || (data.ContentsTargets.Count == 0 && data.ValueTargets.Count == 0 && !data.SleepSelected && !data.DeathSelected)) {
-                return;
+                return false;
             }
-            if (m_isScanning) {
+            if (m_scanStatus >= ScanStatus.ScanningBlocks
+                || m_cancelSource != null) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "1"), Color.White, false, true);
                 }
-                return;
+                return false;
             }
             if (DateTime.Now - m_lastScanTime < TimeSpan.FromSeconds(1)) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "2"), Color.White, false, true);
                 }
-                return;
+                return false;
             }
-            m_isScanning = true;
+            foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
+                componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "7"), Color.White, false, false);
+            }
+            m_cancelSource = new CancellationTokenSource();
+            m_scanStatus = ScanStatus.ScanningBlocks;
+            m_scanningData = data;
             m_lastScanTime = DateTime.Now;
             data.ResetResults();
-            ScanBlocks(
+            return true;
+        }
+
+        /// <summary>
+        ///     扫描获取所有结果，并获取路径
+        /// </summary>
+        public async Task ScanAsync(Point3 start, MineralPathfinderBlockData data) {
+            // 务必先在主线程运行 PrepareForScan
+            await ScanBlocksAsync(
                 start,
                 data.ContentsTargets,
                 data.ValueTargets,
@@ -253,6 +295,12 @@ namespace Game {
                 data.MaxResultGroupCount,
                 data.ScanRange
             );
+            if (m_scanStatus != ScanStatus.ScanningBlocks) {
+                data.ResetResults();
+                m_cancelSource = null;
+                m_scanningData = null;
+                return;
+            }
             if (data.SleepSelected) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     Point3 point3 = Terrain.ToCell(componentPlayer.PlayerData.SpawnPosition);
@@ -273,14 +321,56 @@ namespace Game {
                     }
                 }
             }
-            if (data.ResultVeins.Count > 0) {
-                if (data.ResultVeins.Count > data.MaxResultGroupCount) {
-                    KeepNearest(data.ResultVeins, start, data.MaxResultGroupCount);
+            if (m_cancelSource.IsCancellationRequested) {
+                m_scanStatus = ScanStatus.Canceled;
+                data.ResetResults();
+                m_cancelSource = null;
+                m_scanningData = null;
+                return;
+            }
+            if (data.ResultVeins.Count == 0) {
+                m_scanStatus = ScanStatus.Completed;
+                m_cancelSource = null;
+                m_scanningData = null;
+                return;
+            }
+            m_scanStatus = ScanStatus.FindingPath;
+            if (data.ResultVeins.Count > data.MaxResultGroupCount) {
+                KeepNearest(data.ResultVeins, start, data.MaxResultGroupCount);
+            }
+            data.m_resultPath = await FindPathAsync(start, data.ResultVeins.Keys.ToArray());
+            if (m_scanStatus != ScanStatus.FindingPath) {
+                data.ResetResults();
+                m_cancelSource = null;
+                m_scanningData = null;
+                return;
+            }
+            data.ScannedSuccessfully();
+            Dispatcher.Dispatch(() => ShowScanResult(data.ResultVeins.Count));
+            m_scanStatus = ScanStatus.Completed;
+            m_cancelSource = null;
+            m_scanningData = null;
+        }
+
+        public void ContinueScan() {
+            m_continueSource?.TrySetResult(true);
+        }
+
+        public void CancelScan() {
+            if (m_cancelSource != null
+                && !m_cancelSource.IsCancellationRequested) {
+                m_cancelSource.Cancel();
+                foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
+                    componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "6"), Color.White, false, false);
                 }
-                data.m_resultPath = FindPath(start, data.ResultVeins.Keys.ToArray());
+            }
+        }
+
+        public void ShowScanResult(int resultGroupCount) {
+            if (resultGroupCount > 0) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     componentPlayer.ComponentGui.DisplaySmallMessage(
-                        string.Format(LanguageControl.Get(fName, "3"), data.ResultVeins.Count),
+                        string.Format(LanguageControl.Get(fName, "3"), resultGroupCount),
                         Color.White,
                         false,
                         false
@@ -292,13 +382,12 @@ namespace Game {
                     componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "4"), Color.White, false, false);
                 }
             }
-            m_isScanning = false;
         }
 
         /// <summary>
         ///     在实体方块表面爬行，寻找并统计连续的目标方块数量并触发回调，但不破坏地形
         /// </summary>
-        public void ScanBlocks(Point3 start,
+        public async Task ScanBlocksAsync(Point3 start,
             ISet<int> contentsTargets,
             ISet<int> valueTargets,
             Action<CellFace, int, int, bool> callback,
@@ -321,46 +410,66 @@ namespace Game {
                     toVisiteQueue.Enqueue(new CellFace(start, i));
                 }
             }
+            int enqueuedCount = toVisiteQueue.Count;
+            int nextEnqueuedCount = 0;
+            int dequeuedCount = 0;
             while (toVisiteQueue.Count > 0) {
-                CellFace current = toVisiteQueue.Dequeue();
-                Point3 currentPoint3 = current.Point;
-                // 检查方块是否有效
-                int currentBlockValue = Terrain.ReplaceLight(m_terrain.GetCellValueFast(currentPoint3), 0);
-                if (currentBlockValue == 0) {
-                    continue; // 如果变成了空气（可能被其他逻辑修改），跳过
-                }
-                // 检查面是否爬过
-                if (visitedFaces.Contains(current)) {
-                    continue;
-                }
-                // 如果是目标方块，且从未被任何一次扫描统计过
-                if (valueTargets.Contains(currentBlockValue)) {
-                    if (!scannedBlocks.Contains(currentPoint3)) {
-                        // 启动泛洪搜索，统计这一“脉”矿的数量，并标记所有相关方块为已扫描
-                        int count = CountContinuousBlocks(currentPoint3, currentBlockValue, false, scannedBlocks);
-                        // 回调：返回 值, 起始位置, 数量
-                        callback(current, currentBlockValue, count, false);
-                        if (++resultCount >= maxResultGroupCount) {
-                            return;
+                while (dequeuedCount < enqueuedCount) {
+                    CellFace current = toVisiteQueue.Dequeue();
+                    dequeuedCount++;
+                    Point3 currentPoint3 = current.Point;
+                    // 检查方块是否有效
+                    int currentBlockValue = Terrain.ReplaceLight(m_terrain.GetCellValueFast(currentPoint3), 0);
+                    if (currentBlockValue == 0) {
+                        continue; // 如果变成了空气（可能被其他逻辑修改），跳过
+                    }
+                    // 检查面是否爬过
+                    if (visitedFaces.Contains(current)) {
+                        continue;
+                    }
+                    // 如果是目标方块，且从未被任何一次扫描统计过
+                    if (valueTargets.Contains(currentBlockValue)) {
+                        if (!scannedBlocks.Contains(currentPoint3)) {
+                            // 启动泛洪搜索，统计这一“脉”矿的数量，并标记所有相关方块为已扫描
+                            int count = CountContinuousBlocks(currentPoint3, currentBlockValue, false, scannedBlocks);
+                            // 回调：返回 起始位置, 值, 数量, 是否仅判断Contents
+                            callback(current, currentBlockValue, count, false);
+                            if (++resultCount >= maxResultGroupCount) {
+                                return;
+                            }
                         }
                     }
-                }
-                else {
-                    int currentBlockContents = Terrain.ExtractContents(currentBlockValue);
-                    if (contentsTargets.Contains(currentBlockContents)
-                        && !scannedBlocks.Contains(currentPoint3)) {
-                        int count = CountContinuousBlocks(currentPoint3, currentBlockContents, true, scannedBlocks);
-                        callback(current, currentBlockValue, count, true);
-                        if (++resultCount >= maxResultGroupCount) {
-                            return;
+                    else {
+                        int currentBlockContents = Terrain.ExtractContents(currentBlockValue);
+                        if (contentsTargets.Contains(currentBlockContents)
+                            && !scannedBlocks.Contains(currentPoint3)) {
+                            int count = CountContinuousBlocks(currentPoint3, currentBlockContents, true, scannedBlocks);
+                            callback(current, currentBlockValue, count, true);
+                            if (++resultCount >= maxResultGroupCount) {
+                                return;
+                            }
                         }
                     }
+                    // 无论是目标方块还是普通方块，在 Scan 模式下它依然是实体，
+                    // 我们需要标记这个面为已访问，并继续在其表面爬行以寻找更多目标。
+                    visitedFaces.Add(current);
+                    foreach (CellFace neighbor in GetCrawlingNeighbors(current, rangeSquared)) {
+                        toVisiteQueue.Enqueue(neighbor);
+                        nextEnqueuedCount++;
+                    }
                 }
-                // 无论是目标方块还是普通方块，在 Scan 模式下它依然是实体，
-                // 我们需要标记这个面为已访问，并继续在其表面爬行以寻找更多目标。
-                visitedFaces.Add(current);
-                foreach (CellFace neighbor in GetCrawlingNeighbors(current, rangeSquared)) {
-                    toVisiteQueue.Enqueue(neighbor);
+                enqueuedCount = nextEnqueuedCount;
+                nextEnqueuedCount = 0;
+                dequeuedCount = 0;
+                if (m_cancelSource.IsCancellationRequested) {
+                    m_scanStatus = ScanStatus.Canceled;
+                    return;
+                }
+                m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                Task completed = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
+                if (completed != m_continueSource.Task) {
+                    m_scanStatus = ScanStatus.Canceled;
+                    return;
                 }
             }
         }
@@ -439,7 +548,6 @@ namespace Game {
                     result.Add(new CellFace(diagonal, CellFace.OppositeFace(tangent)));
                     continue;
                 }
-
                 //实际不需要，因为对角无效时邻居肯定也无效
                 // 检查邻居本身是否越界或未加载
                 /*if (!m_terrain.IsCellValid(neighbor)) {
@@ -467,12 +575,11 @@ namespace Game {
         /// <summary>
         ///     寻找从起点出发，逐个抵达所有目的地的表面爬行路径。
         /// </summary>
-        public List<CellFace> FindPath(Point3 start, CellFace[] destinations, int maxSteps = int.MaxValue) {
+        public async Task<List<CellFace>> FindPathAsync(Point3 start, CellFace[] destinations, int maxSteps = int.MaxValue) {
             if (destinations == null
                 || destinations.Length == 0) {
                 return new List<CellFace>();
             }
-
             // 1. 确定起点的有效初始面 (Start Nodes)
             List<CellFace> initialStartFaces = new();
             for (int i = 0; i < 6; i++) {
@@ -549,7 +656,6 @@ namespace Game {
             if (bestOrder == null) {
                 return null; // 无法形成路径 (理论上曼哈顿距离总是非无穷大)
             }
-
             // 4. 逐段计算 A* 路径并拼接
             List<CellFace> finalPath = new();
 
@@ -561,6 +667,16 @@ namespace Game {
                 return null;
             }
             finalPath.AddRange(segmentPath);
+            if (m_cancelSource.IsCancellationRequested) {
+                m_scanStatus = ScanStatus.Canceled;
+                return null;
+            }
+            m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task completed = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
+            if (completed != m_continueSource.Task) {
+                m_scanStatus = ScanStatus.Canceled;
+                return null;
+            }
 
             // 4.b 后续段：目的地 i -> 目的地 i+1
             for (int i = 0; i < bestOrder.Length - 1; i++) {
@@ -575,6 +691,16 @@ namespace Game {
 
                 // 拼接路径：跳过段的起点 (因为它已经在上一段的终点中)
                 finalPath.AddRange(segmentPath.Skip(1));
+                if (m_cancelSource.IsCancellationRequested) {
+                    m_scanStatus = ScanStatus.Canceled;
+                    return null;
+                }
+                m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                Task completed1 = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
+                if (completed1 != m_continueSource.Task) {
+                    m_scanStatus = ScanStatus.Canceled;
+                    return null;
+                }
             }
             return finalPath;
         }
@@ -719,65 +845,19 @@ namespace Game {
             PlaceableBlockContents.Add(MagmaBlock.Index);
         }
 
-        public HashSet<int> BlockContentsToValues(HashSet<int> blockContents) {
-            HashSet<int> result = [];
-            foreach (int contents in blockContents) {
-                Block block = BlocksManager.Blocks[contents];
-                switch (block) {
-                    case FluidBlock fluidBlock:
-                        for (int i = 0; i < fluidBlock.MaxLevel; i++) {
-                            result.Add(Terrain.MakeBlockValue(contents, 0, FluidBlock.SetLevel(0, i)));
-                            result.Add(Terrain.MakeBlockValue(contents, 0, FluidBlock.SetLevel(FluidBlock.SetIsTop(0, true), i)));
-                        }
-                        break;
-                    case StairsBlock:
-                        for (int color = -1; color < 16; color++) {
-                            for (int variant = 0; variant < 0x1F; variant++) {
-                                result.Add(Terrain.MakeBlockValue(contents, color, StairsBlock.SetColor(variant, color == -1 ? null : color)));
-                            }
-                        }
-                        break;
-                    case SlabBlock:
-                        for (int color = -1; color < 16; color++) {
-                            for (int variant = 0; variant < 1; variant++) {
-                                result.Add(Terrain.MakeBlockValue(contents, color, SlabBlock.SetColor(variant, color == -1 ? null : color)));
-                            }
-                        }
-                        break;
-                    case RotateableMountedElectricElementBlock:
-                        for (int face = 0; face < 6; face++) {
-                            for (int rotation = 0; rotation < 4; rotation++) {
-                                result.Add(
-                                    Terrain.MakeBlockValue(contents, face, RotateableMountedElectricElementBlock.SetRotation(face << 2, rotation))
-                                );
-                            }
-                        }
-                        break;
-                    default:
-                        foreach (int value in block.GetCreativeValues()) {
-                            if (block.IsPlaceable_(contents)) {
-                                result.Add(contents);
-                            }
-                        }
-                        break;
-                }
-            }
-            return result;
-        }
-
         public override void Dispose() {
             base.Dispose();
             PlaceableBlockContents.Clear();
             foreach (MineralPathfinderBlockData data in m_itemsData.Values) {
-                data.Dispose();
+                data.DisposeAsync();
             }
             m_itemsData.Clear();
             foreach (MineralPathfinderBlockData data in m_blocksData.Values) {
-                data.Dispose();
+                data.DisposeAsync();
             }
             m_blocksData.Clear();
             foreach (MineralPathfinderBlockData data in m_movingBlocksData.Values) {
-                data.Dispose();
+                data.DisposeAsync();
             }
             m_movingBlocksData.Clear();
         }

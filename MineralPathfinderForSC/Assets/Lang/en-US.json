@@ -3,7 +3,10 @@
     "1": "There is already a scan in progress",
     "2": "Scan too frequently",
     "3": "Scan successful. {0} groups of results",
-    "4": "No Result"
+    "4": "No Result",
+    "5": "Scanning, cannot edit.",
+    "6": "The scan is canceled",
+    "7": "Start scanning"
   },
   "EditMineralPathfinderDialog": {
     "1": "Sort Order",

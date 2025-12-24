@@ -423,7 +423,8 @@ namespace Game {
             m_resultPathIndicatorTimeToBlockValue.Clear();
         }
 
-        public void ScannedSuccessfully() {
+        public void OnScannedSuccessfully() {
+            ScanningProgress.Clear();
             _ = ResultPathStripe;
         }
 

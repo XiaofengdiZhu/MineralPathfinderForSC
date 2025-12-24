@@ -345,7 +345,7 @@ namespace Game {
                 m_scanningData = null;
                 return;
             }
-            data.ScannedSuccessfully();
+            data.OnScannedSuccessfully();
             Dispatcher.Dispatch(() => ShowScanResult(data.ResultVeins.Count));
             m_scanStatus = ScanStatus.Completed;
             m_cancelSource = null;
@@ -424,7 +424,7 @@ namespace Game {
                         continue; // 如果变成了空气（可能被其他逻辑修改），跳过
                     }
                     // 检查面是否爬过
-                    if (visitedFaces.Contains(current)) {
+                    if (!visitedFaces.Add(current)) {
                         continue;
                     }
                     // 如果是目标方块，且从未被任何一次扫描统计过
@@ -450,9 +450,6 @@ namespace Game {
                             }
                         }
                     }
-                    // 无论是目标方块还是普通方块，在 Scan 模式下它依然是实体，
-                    // 我们需要标记这个面为已访问，并继续在其表面爬行以寻找更多目标。
-                    visitedFaces.Add(current);
                     foreach (CellFace neighbor in GetCrawlingNeighbors(current, rangeSquared)) {
                         toVisiteQueue.Enqueue(neighbor);
                         nextEnqueuedCount++;
@@ -494,7 +491,7 @@ namespace Game {
                         continue;
                     }
                     // 已经在全局扫描列表中，跳过（避免重复计数和死循环）
-                    if (scannedBlocks.Contains(neighbor)) {
+                    if (!scannedBlocks.Add(neighbor)) {
                         continue;
                     }
                     TerrainChunk neighborChunk = m_terrain.GetChunkAtCell(neighbor.X, neighbor.Z);
@@ -507,11 +504,8 @@ namespace Game {
                         neighborBlockValue = Terrain.ExtractContents(neighborBlockValue);
                     }
                     if (neighborBlockValue == target) {
-                        scannedBlocks.Add(neighbor); // 入队前立即标记，防止重复入队
                         veinQueue.Enqueue(neighbor);
                     }
-                    // 注意：这里不需要像 DigBlocks 那样处理 "非目标实体"，
-                    // 因为我们不进行挖掘，不会暴露内部的新面，所以不需要关心内部的非目标方块。
                 }
             }
             return count;
@@ -548,7 +542,7 @@ namespace Game {
                     result.Add(new CellFace(diagonal, CellFace.OppositeFace(tangent)));
                     continue;
                 }
-                //实际不需要，因为对角无效时邻居肯定也无效
+                // 实际不需要，因为对角无效时邻居肯定也无效
                 // 检查邻居本身是否越界或未加载
                 /*if (!m_terrain.IsCellValid(neighbor)) {
                     continue;
@@ -581,11 +575,11 @@ namespace Game {
                 return new List<CellFace>();
             }
             // 1. 确定起点的有效初始面 (Start Nodes)
-            List<CellFace> initialStartFaces = new();
+            List<int> initialStartFaces = new();
             for (int i = 0; i < 6; i++) {
                 Point3 neighbor = start + CellFace.FaceToPoint3(i);
                 if (IsValidAir(neighbor)) {
-                    initialStartFaces.Add(new CellFace(start, i));
+                    initialStartFaces.Add(i);
                 }
             }
             if (initialStartFaces.Count == 0) {
@@ -600,13 +594,8 @@ namespace Game {
             int[,] distCache = new int[nodeCount, nodeCount];
 
             // 2.a 计算 起点 -> 所有目标 (StartPoint3 到目标 Point3)
-            // 这里的距离是 StartPoint3 的最佳面到目标 CellFace 的 Point3 的曼哈顿距离
             for (int i = 0; i < count; i++) {
-                int minManhattanDist = int.MaxValue;
-                foreach (CellFace sFace in initialStartFaces) {
-                    minManhattanDist = Math.Min(minManhattanDist, ManhattanDistance(sFace.Point, destinations[i].Point));
-                }
-                distCache[0, i + 1] = minManhattanDist;
+                distCache[0, i + 1] = ManhattanDistance(start, destinations[i].Point);
             }
 
             // 2.b 计算 目标 -> 目标 (目标 CellFace 的 Point3 之间)
@@ -625,20 +614,12 @@ namespace Game {
             int minTotalDistance = int.MaxValue;
             CellFace bestStartFace = default; // 记录最佳路径对应的 StartFace
             foreach (int[] order in Permutations(indices)) {
-                int currentManhattanDist = 0;
-
                 // 3.a 确定起点到第一个目标的最佳起始面
                 int firstDestIndex = order.First();
-                int minInitialDist = int.MaxValue;
-                CellFace tempBestStartFace = default;
-                foreach (CellFace sFace in initialStartFaces) {
-                    int dist = ManhattanDistance(sFace.Point, destinations[firstDestIndex].Point);
-                    if (dist < minInitialDist) {
-                        minInitialDist = dist;
-                        tempBestStartFace = sFace;
-                    }
-                }
-                currentManhattanDist += minInitialDist;
+                CellFace firstDest = destinations[firstDestIndex];
+                Vector3 firstDestVector3 = firstDest.GetFaceCenter(0f);
+                CellFace tempBestStartFace = new(start, GetBestFaceFromCandidates(start, firstDest, initialStartFaces));
+                int currentManhattanDist = ManhattanDistance(start, firstDest.Point);
 
                 // 3.b 计算后续目标之间的距离
                 int currentNodeIndex = firstDestIndex + 1; // 对应 distCache 的索引 1..N
@@ -889,6 +870,49 @@ namespace Game {
             while (pq.Count > 0) {
                 dic.Remove(pq.Dequeue());
             }
+        }
+
+        public static int GetBestFaceFromCandidates(Point3 start, CellFace dest, IList<int> candidates) {
+            if (candidates.Count == 0) {
+                return -1;
+            }
+            if (candidates.Count == 1) {
+                return candidates[0]; // 只有一个直接返回，省去计算
+            }
+
+            // 1. 获取目标面的法线向量
+            Point3 destNormal = CellFace.FaceToPoint3(dest.Face);
+
+            // 2. 计算 "起点中心 -> 终点面中心" 的方向向量 V (坐标放大2倍)
+            // 公式：V = 2 * (DestBlock - StartBlock) + DestNormal
+            int vx = ((dest.X - start.X) << 1) + destNormal.X;
+            int vy = ((dest.Y - start.Y) << 1) + destNormal.Y;
+            int vz = ((dest.Z - start.Z) << 1) + destNormal.Z;
+            int bestFace = candidates[0];
+            int maxScore = int.MinValue;
+
+            // 3. 遍历候选列表，寻找与 V 方向最一致的面（点乘最大）
+            for (int i = 0; i < candidates.Count; i++) {
+                int face = candidates[i];
+                int score;
+
+                // 核心优化：面法线是单位向量，点乘等同于直接取分量
+                // Face 0: +Z, 1: +X, 2: -Z, 3: -X, 4: +Y, 5: -Y
+                switch (face) {
+                    case 0: score = vz; break; // V dot (0,0,1)
+                    case 1: score = vx; break; // V dot (1,0,0)
+                    case 2: score = -vz; break; // V dot (0,0,-1)
+                    case 3: score = -vx; break; // V dot (-1,0,0)
+                    case 4: score = vy; break; // V dot (0,1,0)
+                    case 5: score = -vy; break; // V dot (0,-1,0)
+                    default: score = int.MinValue; break;
+                }
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestFace = face;
+                }
+            }
+            return bestFace;
         }
     }
 }

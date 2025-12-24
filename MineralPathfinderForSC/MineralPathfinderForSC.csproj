@@ -46,6 +46,7 @@
       <Compile Include="MineralPathfinderBlock.cs" />
       <Compile Include="MineralPathfinderBlockData.cs" />
       <Compile Include="MineralPathfinderElectricElement.cs" />
+      <Compile Include="ScanningProgressBuffer.cs" />
       <Compile Include="SubsystemMineralPathfinderBlockBehavior.cs" />
       <Compile Include="Widgets\MPListPanelWidget.cs" />
       <Compile Include="Widgets\MPSelectiveFlexPanelWidget.cs" />

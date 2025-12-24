@@ -29,6 +29,7 @@ namespace Game {
         public volatile MineralPathfinderBlockData m_scanningData;
         public CancellationTokenSource m_cancelSource;
         public TaskCompletionSource<bool> m_continueSource;
+        public double m_lastUpdateTime;
         public double m_lastDrawTime;
         public readonly PrimitivesRenderer3D m_primitivesRenderer3D = new();
         public FontBatch3D m_fontBatch3D;
@@ -38,7 +39,15 @@ namespace Game {
         public readonly DrawBlockEnvironmentData m_drawBlockEnvironmentData = new();
         public readonly HashSet<int> PlaceableBlockContents = [];
         public readonly HashSet<int> FavoriteTargets = [];
-        public static Color[] ScanProgressColors = [new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)32)];
+
+        public static Color[] ScanProgressColors = [
+            new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)16),
+            new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)32),
+            new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)48),
+            new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)64),
+            new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)80)
+        ];
+
         public static Color PathStripeColor = new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)128);
         public static Color PathIndicatorColor = new(byte.MaxValue, byte.MaxValue, (byte)0, (byte)192);
         public const float PathIndicatorSpeed = 3f;
@@ -106,6 +115,7 @@ namespace Game {
             if (data != null) {
                 if (data == m_scanningData) {
                     componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "5"), Color.White, false, false);
+                    return true;
                 }
                 DialogsManager.ShowDialog(componentPlayer.GuiWidget, new EditMineralPathfinderDialog(this, componentPlayer, data));
             }
@@ -142,12 +152,16 @@ namespace Game {
 
         public void Draw(Camera camera, int drawOrder) {
             double time = Time.RealTime;
-            m_lastDrawTime = time;
             float deltaTime = (float)(time - m_lastDrawTime);
+            m_lastDrawTime = time;
             Vector3 viewDirection = camera.ViewDirection;
             foreach ((Point3 position, MineralPathfinderBlockData data) in m_blocksData) {
                 if (data == m_scanningData) {
                     m_flatBatch3D.QueueCube(new Vector3(position.X + 0.5f, position.Y + 0.5f, position.Z + 0.5f), 1.1f, ScanProgressColors[0]);
+                    int i = 0;
+                    foreach (IReadOnlyList<Vector3> list in data.ScanningProgressBuffer.EnumerateHistory()) {
+                        m_flatBatch3D.QueueTriangles(list, ScanProgressColors[i++]);
+                    }
                     continue;
                 }
                 if (data.ResultVeins.Count == 0) {
@@ -247,7 +261,16 @@ namespace Game {
         }
 
         public void Update(float dt) {
-            ContinueScan();
+            double time = Time.RealTime;
+            if (time - m_lastUpdateTime
+                > m_scanStatus switch {
+                    ScanStatus.ScanningBlocks => 0.1,
+                    ScanStatus.FindingPath => 0,
+                    _ => float.PositiveInfinity
+                }) {
+                m_lastUpdateTime = time;
+                ContinueScan();
+            }
         }
 
         public bool PrepareForScan(MineralPathfinderBlockData data) {
@@ -292,6 +315,7 @@ namespace Game {
                 (cellFace, blockValue, count, onlyContents) => {
                     data.ResultVeins.Add(cellFace, new BlockValueAndCount(onlyContents ? Terrain.ExtractContents(blockValue) : blockValue, count));
                 },
+                data.ScanningProgressBuffer.AddStep,
                 data.MaxResultGroupCount,
                 data.ScanRange
             );
@@ -390,7 +414,8 @@ namespace Game {
         public async Task ScanBlocksAsync(Point3 start,
             ISet<int> contentsTargets,
             ISet<int> valueTargets,
-            Action<CellFace, int, int, bool> callback,
+            Action<CellFace, int, int, bool> foundCallback,
+            Action<CellFace, bool> visitCallback,
             int maxResultGroupCount = 1,
             float range = float.PositiveInfinity) {
             if (maxResultGroupCount < 1
@@ -414,6 +439,7 @@ namespace Game {
             int nextEnqueuedCount = 0;
             int dequeuedCount = 0;
             while (toVisiteQueue.Count > 0) {
+                bool nextTurn = true;
                 while (dequeuedCount < enqueuedCount) {
                     CellFace current = toVisiteQueue.Dequeue();
                     dequeuedCount++;
@@ -424,7 +450,11 @@ namespace Game {
                         continue; // 如果变成了空气（可能被其他逻辑修改），跳过
                     }
                     // 检查面是否爬过
-                    if (!visitedFaces.Add(current)) {
+                    if (visitedFaces.Add(current)) {
+                        visitCallback(current, nextTurn);
+                        nextTurn = false;
+                    }
+                    else {
                         continue;
                     }
                     // 如果是目标方块，且从未被任何一次扫描统计过
@@ -433,7 +463,7 @@ namespace Game {
                             // 启动泛洪搜索，统计这一“脉”矿的数量，并标记所有相关方块为已扫描
                             int count = CountContinuousBlocks(currentPoint3, currentBlockValue, false, scannedBlocks);
                             // 回调：返回 起始位置, 值, 数量, 是否仅判断Contents
-                            callback(current, currentBlockValue, count, false);
+                            foundCallback(current, currentBlockValue, count, false);
                             if (++resultCount >= maxResultGroupCount) {
                                 return;
                             }
@@ -444,7 +474,7 @@ namespace Game {
                         if (contentsTargets.Contains(currentBlockContents)
                             && !scannedBlocks.Contains(currentPoint3)) {
                             int count = CountContinuousBlocks(currentPoint3, currentBlockContents, true, scannedBlocks);
-                            callback(current, currentBlockValue, count, true);
+                            foundCallback(current, currentBlockValue, count, true);
                             if (++resultCount >= maxResultGroupCount) {
                                 return;
                             }
@@ -617,7 +647,6 @@ namespace Game {
                 // 3.a 确定起点到第一个目标的最佳起始面
                 int firstDestIndex = order.First();
                 CellFace firstDest = destinations[firstDestIndex];
-                Vector3 firstDestVector3 = firstDest.GetFaceCenter(0f);
                 CellFace tempBestStartFace = new(start, GetBestFaceFromCandidates(start, firstDest, initialStartFaces));
                 int currentManhattanDist = ManhattanDistance(start, firstDest.Point);
 

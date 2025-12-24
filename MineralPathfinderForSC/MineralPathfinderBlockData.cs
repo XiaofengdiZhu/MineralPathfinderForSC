@@ -309,6 +309,10 @@ namespace Game {
 
         public Vector3[] ResultPathIndicatorQuadVertices => m_resultPathIndicatorQuadVertices;
 
+        public ScanningProgressBuffer m_scanningProgressBuffer = new(5);
+
+        public ScanningProgressBuffer ScanningProgressBuffer => m_scanningProgressBuffer;
+
         public MineralPathfinderBlockData(int maxResultGroupCount = 1,
             float scanRange = 100,
             bool showIndicator = true,
@@ -424,7 +428,7 @@ namespace Game {
         }
 
         public void OnScannedSuccessfully() {
-            ScanningProgress.Clear();
+            ScanningProgressBuffer.Clear();
             _ = ResultPathStripe;
         }
 

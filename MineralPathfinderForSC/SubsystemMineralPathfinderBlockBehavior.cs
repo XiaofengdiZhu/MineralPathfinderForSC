@@ -340,7 +340,7 @@ namespace Game {
                         Point3 point3 = Terrain.ToCell(playerStats.DeathRecords.Last().Location);
                         if (m_terrain.GetCellContents(point3) == 0
                             && m_terrain.GetCellContents(point3.X, point3.Y - 1, point3.Z) != 0) {
-                            data.ResultVeins.Add(new CellFace(point3.X, point3.Y - 1, point3.Z, 4), new BlockValueAndCount(-1, 1));
+                            data.ResultVeins.Add(new CellFace(point3.X, point3.Y - 1, point3.Z, 4), new BlockValueAndCount(-2, 1));
                         }
                     }
                 }
@@ -598,11 +598,12 @@ namespace Game {
 
         /// <summary>
         ///     寻找从起点出发，逐个抵达所有目的地的表面爬行路径。
+        ///     如果某个目标无法抵达，则自动忽略并尝试前往下一个目标。
         /// </summary>
         public async Task<List<CellFace>> FindPathAsync(Point3 start, CellFace[] destinations, int maxSteps = int.MaxValue) {
             if (destinations == null
                 || destinations.Length == 0) {
-                return new List<CellFace>();
+                return [];
             }
             // 1. 确定起点的有效初始面 (Start Nodes)
             List<int> initialStartFaces = new();
@@ -616,103 +617,73 @@ namespace Game {
                 return null;
             }
 
-            // 2. 构建节点和曼哈顿距离缓存
-            int count = destinations.Length;
-            int nodeCount = count + 1; // 0=StartPoint3, 1..N=Destinations
-
-            // 缓存曼哈顿距离
-            int[,] distCache = new int[nodeCount, nodeCount];
-
-            // 2.a 计算 起点 -> 所有目标 (StartPoint3 到目标 Point3)
-            for (int i = 0; i < count; i++) {
-                distCache[0, i + 1] = ManhattanDistance(start, destinations[i].Point);
-            }
-
-            // 2.b 计算 目标 -> 目标 (目标 CellFace 的 Point3 之间)
-            for (int i = 0; i < count; i++) {
-                for (int j = 0; j < count; j++) {
-                    if (i == j) {
-                        continue;
-                    }
-                    distCache[i + 1, j + 1] = ManhattanDistance(destinations[i].Point, destinations[j].Point);
-                }
-            }
-
-            // 3. TSP 求解：寻找基于曼哈顿距离的最短访问顺序 (全排列)
-            int[] indices = Enumerable.Range(0, count).ToArray(); // 目标索引 0..N-1
-            int[] bestOrder = null;
-            int minTotalDistance = int.MaxValue;
-            CellFace bestStartFace = default; // 记录最佳路径对应的 StartFace
-            foreach (int[] order in Permutations(indices)) {
-                // 3.a 确定起点到第一个目标的最佳起始面
-                int firstDestIndex = order.First();
-                CellFace firstDest = destinations[firstDestIndex];
-                CellFace tempBestStartFace = new(start, GetBestFaceFromCandidates(start, firstDest, initialStartFaces));
-                int currentManhattanDist = ManhattanDistance(start, firstDest.Point);
-
-                // 3.b 计算后续目标之间的距离
-                int currentNodeIndex = firstDestIndex + 1; // 对应 distCache 的索引 1..N
-                foreach (int nextDestIndex in order.Skip(1)) {
-                    int nextNodeIndex = nextDestIndex + 1;
-                    currentManhattanDist += distCache[currentNodeIndex, nextNodeIndex];
-                    currentNodeIndex = nextNodeIndex;
-                }
-                if (currentManhattanDist < minTotalDistance) {
-                    minTotalDistance = currentManhattanDist;
-                    bestOrder = order.ToArray();
-                    bestStartFace = tempBestStartFace; // 存储与当前最佳路径对应的起点
-                }
-            }
+            // 2. TSP 求解 (此处保留原有的基于曼哈顿距离的最短顺序计算)
+            int[] bestOrder = GetBestTSPOrder(start, destinations);
             if (bestOrder == null) {
-                return null; // 无法形成路径 (理论上曼哈顿距离总是非无穷大)
+                return null;
             }
-            // 4. 逐段计算 A* 路径并拼接
+            // 3. 逐段计算 A* 路径并拼接
             List<CellFace> finalPath = new();
 
-            // 4.a 第一段：StartPoint3 的最佳面 -> 第一个目的地
-            CellFace segmentStart = bestStartFace;
-            CellFace segmentEnd = destinations[bestOrder[0]];
-            List<CellFace> segmentPath = CalcAStarPath(segmentStart, segmentEnd, maxSteps);
-            if (segmentPath == null) {
-                return null;
-            }
-            finalPath.AddRange(segmentPath);
-            if (m_cancelSource.IsCancellationRequested) {
-                m_scanStatus = ScanStatus.Canceled;
-                return null;
-            }
-            m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Task completed = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
-            if (completed != m_continueSource.Task) {
-                m_scanStatus = ScanStatus.Canceled;
-                return null;
-            }
+            // 初始化当前段的起点为 StartPoint3 的最佳起始面
+            int firstTargetIdx = bestOrder[0];
+            int startFace = GetBestFaceFromCandidates(start, destinations[firstTargetIdx], initialStartFaces);
+            CellFace currentSegmentStart = new(start, startFace);
 
-            // 4.b 后续段：目的地 i -> 目的地 i+1
-            for (int i = 0; i < bestOrder.Length - 1; i++) {
-                segmentStart = destinations[bestOrder[i]];
-                segmentEnd = destinations[bestOrder[i + 1]];
+            // 4. 遍历 TSP 确定的目标顺序
+            for (int i = 0; i < bestOrder.Length; i++) {
+                CellFace targetDest = destinations[bestOrder[i]];
 
-                // 直接使用 CellFace 作为 A* 路径的起点
-                segmentPath = CalcAStarPath(segmentStart, segmentEnd, maxSteps);
-                if (segmentPath == null) {
-                    return null;
-                }
-
-                // 拼接路径：跳过段的起点 (因为它已经在上一段的终点中)
-                finalPath.AddRange(segmentPath.Skip(1));
+                // 异步检查取消令牌
                 if (m_cancelSource.IsCancellationRequested) {
                     m_scanStatus = ScanStatus.Canceled;
                     return null;
                 }
+
+                // 计算当前位置到该目标的路径
+                List<CellFace> segmentPath = CalcAStarPath(currentSegmentStart, targetDest, maxSteps);
+                if (segmentPath != null
+                    && segmentPath.Count > 0) {
+                    // --- 寻路成功 ---
+                    // 跳过重复的连接点（当前段起点即是上一段终点）
+                    finalPath.AddRange(finalPath.Count == 0 ? segmentPath : segmentPath.Skip(1));
+
+                    // 更新下一段的起点为“已抵达的目标”
+                    currentSegmentStart = targetDest;
+                }
+                else {
+                    // --- 寻路失败 ---
+                    // 下一次循环将尝试从“上一个成功抵达的点”直接去往“下下一个目标”
+                    continue;
+                }
                 m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                Task completed1 = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
-                if (completed1 != m_continueSource.Task) {
+                Task completed = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
+                if (completed != m_continueSource.Task) {
                     m_scanStatus = ScanStatus.Canceled;
                     return null;
                 }
             }
-            return finalPath;
+
+            // 如果最后一段路径都没找到，且 finalPath 为空，则返回空列表或 null
+            return finalPath.Count > 0 ? finalPath : null;
+        }
+
+        public int[] GetBestTSPOrder(Point3 start, CellFace[] destinations) {
+            int count = destinations.Length;
+            int[] indices = Enumerable.Range(0, count).ToArray();
+            int[] bestOrder = null;
+            int minTotalDistance = int.MaxValue;
+            foreach (int[] order in Permutations(indices)) {
+                int currentManhattanDist = ManhattanDistance(start, destinations[order[0]].Point);
+                for (int i = 0; i < order.Length - 1; i++) {
+                    currentManhattanDist += ManhattanDistance(destinations[order[i]].Point, destinations[order[i + 1]].Point);
+                }
+                if (currentManhattanDist < minTotalDistance) {
+                    minTotalDistance = currentManhattanDist;
+                    bestOrder = order.ToArray();
+                }
+            }
+            return bestOrder;
         }
 
         /// <summary>
@@ -828,7 +799,7 @@ namespace Game {
         /// <summary>
         ///     是否是有效的空气方块
         /// </summary>
-        bool IsValidAir(Point3 p) {
+        public bool IsValidAir(Point3 p) {
             if (!m_terrain.IsCellValid(p)) {
                 return false;
             }

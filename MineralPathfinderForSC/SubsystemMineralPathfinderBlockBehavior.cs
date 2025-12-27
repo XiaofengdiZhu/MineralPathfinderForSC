@@ -25,7 +25,7 @@ namespace Game {
         public SubsystemPlayerStats m_subsystemPlayerStats;
         public Terrain m_terrain;
         public volatile ScanStatus m_scanStatus = ScanStatus.NotStarted;
-        public DateTime m_lastScanTime = DateTime.MinValue;
+        public double m_lastScanTime = double.MinValue;
         public volatile MineralPathfinderBlockData m_scanningData;
         public CancellationTokenSource m_cancelSource;
         public TaskCompletionSource<bool> m_continueSource;
@@ -157,7 +157,12 @@ namespace Game {
             Vector3 viewDirection = camera.ViewDirection;
             foreach ((Point3 position, MineralPathfinderBlockData data) in m_blocksData) {
                 if (data == m_scanningData) {
-                    m_flatBatch3D.QueueCube(new Vector3(position.X + 0.5f, position.Y + 0.5f, position.Z + 0.5f), 1.1f, ScanProgressColors[0]);
+                    int cubeColorIndex = (int)((Time.FrameStartTime - m_lastScanTime) * 10) % 15 / 3;
+                    m_flatBatch3D.QueueCube(
+                        new Vector3(position.X + 0.5f, position.Y + 0.5f, position.Z + 0.5f),
+                        1.1f,
+                        ScanProgressColors[cubeColorIndex]
+                    );
                     int i = 0;
                     foreach (IReadOnlyList<Vector3> list in data.ScanningProgressBuffer.EnumerateHistory()) {
                         m_flatBatch3D.QueueTriangles(list, ScanProgressColors[i++]);
@@ -261,7 +266,7 @@ namespace Game {
         }
 
         public void Update(float dt) {
-            double time = Time.RealTime;
+            double time = Time.FrameStartTime;
             if (time - m_lastUpdateTime
                 > m_scanStatus switch {
                     ScanStatus.ScanningBlocks => 0.1,
@@ -286,7 +291,7 @@ namespace Game {
                 }
                 return false;
             }
-            if (DateTime.Now - m_lastScanTime < TimeSpan.FromSeconds(1)) {
+            if (Time.FrameStartTime - m_lastScanTime < 1) {
                 foreach (ComponentPlayer componentPlayer in m_subsystemPlayers.ComponentPlayers) {
                     componentPlayer.ComponentGui.DisplaySmallMessage(LanguageControl.Get(fName, "2"), Color.White, false, true);
                 }
@@ -298,7 +303,7 @@ namespace Game {
             m_cancelSource = new CancellationTokenSource();
             m_scanStatus = ScanStatus.ScanningBlocks;
             m_scanningData = data;
-            m_lastScanTime = DateTime.Now;
+            m_lastScanTime = Time.FrameStartTime;
             data.ResetResults();
             return true;
         }
@@ -312,9 +317,7 @@ namespace Game {
                 start,
                 data.ContentsTargets,
                 data.ValueTargets,
-                (cellFace, blockValue, count, onlyContents) => {
-                    data.ResultVeins.Add(cellFace, new BlockValueAndCount(onlyContents ? Terrain.ExtractContents(blockValue) : blockValue, count));
-                },
+                (cellFace, blockValue, count, onlyContents) => data.ResultVeins.Add(cellFace, new BlockValueAndCount(onlyContents ? Terrain.ExtractContents(blockValue) : blockValue, count)),
                 data.ScanningProgressBuffer.AddStep,
                 data.MaxResultGroupCount,
                 data.ScanRange
@@ -493,8 +496,8 @@ namespace Game {
                     return;
                 }
                 m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                Task completed = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
-                if (completed != m_continueSource.Task) {
+                Task task = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
+                if (task != m_continueSource.Task) {
                     m_scanStatus = ScanStatus.Canceled;
                     return;
                 }
@@ -618,7 +621,7 @@ namespace Game {
             }
 
             // 2. TSP 求解 (此处保留原有的基于曼哈顿距离的最短顺序计算)
-            int[] bestOrder = GetBestTSPOrder(start, destinations);
+            int[] bestOrder = destinations.Length > 8 ? GetGreedyTSPOrder(start, destinations) : GetBestTSPOrder(start, destinations);
             if (bestOrder == null) {
                 return null;
             }
@@ -657,8 +660,8 @@ namespace Game {
                     continue;
                 }
                 m_continueSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                Task completed = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
-                if (completed != m_continueSource.Task) {
+                Task task = await Task.WhenAny(m_continueSource.Task, Task.Delay(Timeout.Infinite, m_cancelSource.Token));
+                if (task != m_continueSource.Task) {
                     m_scanStatus = ScanStatus.Canceled;
                     return null;
                 }
@@ -668,6 +671,10 @@ namespace Game {
             return finalPath.Count > 0 ? finalPath : null;
         }
 
+        /// <summary>
+        ///     计算最佳访问顺序
+        ///     <para>当目标数量 > 8 时，建议请改用GetGreedyTSPOrder。</para>
+        /// </summary>
         public int[] GetBestTSPOrder(Point3 start, CellFace[] destinations) {
             int count = destinations.Length;
             int[] indices = Enumerable.Range(0, count).ToArray();
@@ -677,10 +684,43 @@ namespace Game {
                 int currentManhattanDist = ManhattanDistance(start, destinations[order[0]].Point);
                 for (int i = 0; i < order.Length - 1; i++) {
                     currentManhattanDist += ManhattanDistance(destinations[order[i]].Point, destinations[order[i + 1]].Point);
+                    if (currentManhattanDist >= minTotalDistance) {
+                        break;
+                    }
                 }
                 if (currentManhattanDist < minTotalDistance) {
                     minTotalDistance = currentManhattanDist;
                     bestOrder = order.ToArray();
+                }
+            }
+            return bestOrder;
+        }
+
+        /// <summary>
+        ///     贪婪算法（最近邻法）：O(N^2)
+        ///     每次选择离当前位置最近的一个未访问节点
+        /// </summary>
+        public int[] GetGreedyTSPOrder(Point3 start, CellFace[] destinations) {
+            int count = destinations.Length;
+            int[] bestOrder = new int[count];
+            bool[] visited = new bool[count];
+            Point3 currentPos = start;
+            for (int i = 0; i < count; i++) {
+                int nearestIdx = -1;
+                int minSegmentDist = int.MaxValue;
+                for (int j = 0; j < count; j++) {
+                    if (!visited[j]) {
+                        int dist = ManhattanDistance(currentPos, destinations[j].Point);
+                        if (dist < minSegmentDist) {
+                            minSegmentDist = dist;
+                            nearestIdx = j;
+                        }
+                    }
+                }
+                if (nearestIdx != -1) {
+                    visited[nearestIdx] = true;
+                    bestOrder[i] = nearestIdx;
+                    currentPos = destinations[nearestIdx].Point;
                 }
             }
             return bestOrder;

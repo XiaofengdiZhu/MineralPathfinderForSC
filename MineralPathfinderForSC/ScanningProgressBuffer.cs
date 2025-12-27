@@ -42,6 +42,7 @@ namespace Game {
             if (m_count == 0 || nextTurn) {
                 m_lock.EnterWriteLock();
                 try {
+                    Console.WriteLine($"Last turn vertices: {m_next.Count}");
                     int writeIndex;
                     if (m_count < Capacity) {
                         writeIndex = (m_head + m_count) % Capacity;

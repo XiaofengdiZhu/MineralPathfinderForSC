@@ -38,6 +38,8 @@ namespace Game {
         public TexturedBatch3D m_deathBatch3D;
         public readonly DrawBlockEnvironmentData m_drawBlockEnvironmentData = new();
         public readonly HashSet<int> PlaceableBlockContents = [];
+        public readonly HashSet<int> PlaceableBlockValues = [];
+        public readonly HashSet<string> AvailableCategories = [];
         public readonly HashSet<int> FavoriteTargets = [];
 
         public static Color[] ScanProgressColors = [
@@ -157,11 +159,10 @@ namespace Game {
             Vector3 viewDirection = camera.ViewDirection;
             foreach ((Point3 position, MineralPathfinderBlockData data) in m_blocksData) {
                 if (data == m_scanningData) {
-                    int cubeColorIndex = (int)((Time.FrameStartTime - m_lastScanTime) * 10) % 15 / 3;
                     m_flatBatch3D.QueueCube(
                         new Vector3(position.X + 0.5f, position.Y + 0.5f, position.Z + 0.5f),
                         1.1f,
-                        ScanProgressColors[cubeColorIndex]
+                        new Color(byte.MaxValue, byte.MaxValue, 0, (byte)((Time.FrameStartTime - m_lastScanTime) % 1.5f * 64f) + 16)
                     );
                     int i = 0;
                     foreach (IReadOnlyList<Vector3> list in data.ScanningProgressBuffer.EnumerateHistory()) {
@@ -317,7 +318,10 @@ namespace Game {
                 start,
                 data.ContentsTargets,
                 data.ValueTargets,
-                (cellFace, blockValue, count, onlyContents) => data.ResultVeins.Add(cellFace, new BlockValueAndCount(onlyContents ? Terrain.ExtractContents(blockValue) : blockValue, count)),
+                (cellFace, blockValue, count, onlyContents) => data.ResultVeins.Add(
+                    cellFace,
+                    new BlockValueAndCount(onlyContents ? Terrain.ExtractContents(blockValue) : blockValue, count)
+                ),
                 data.ScanningProgressBuffer.AddStep,
                 data.MaxResultGroupCount,
                 data.ScanRange
@@ -854,9 +858,18 @@ namespace Game {
         public void InitializePlaceableBlocks() {
             for (int blockContents = 0; blockContents < 1024; blockContents++) {
                 Block block = BlocksManager.Blocks[blockContents];
-                if (block is not AirBlock
-                    && block.IsPlaceable_(blockContents)) {
-                    PlaceableBlockContents.Add(blockContents);
+                if (block is not AirBlock) {
+                    if (block.IsPlaceable_(blockContents)) {
+                        PlaceableBlockContents.Add(blockContents);
+                        AvailableCategories.Add(block.GetCategory(blockContents));
+                    }
+                    foreach (int value in block.GetCreativeValues()) {
+                        if (Terrain.ExtractData(value) != 0
+                            && block.IsPlaceable_(value)) {
+                            PlaceableBlockValues.Add(value);
+                            AvailableCategories.Add(block.GetCategory(value));
+                        }
+                    }
                 }
             }
             PlaceableBlockContents.Remove(FurnitureBlock.Index);

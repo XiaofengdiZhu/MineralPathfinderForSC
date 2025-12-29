@@ -27,7 +27,7 @@ namespace Game {
             CoalOreBlock.Index,
             CopperOreBlock.Index,
             IronOreBlock.Index,
-            SulphurChunkBlock.Index,
+            SulphurOreBlock.Index,
             DiamondOreBlock.Index,
             GermaniumOreBlock.Index,
             SaltpeterOreBlock.Index

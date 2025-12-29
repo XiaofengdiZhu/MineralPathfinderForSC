@@ -157,7 +157,11 @@ namespace Game {
             }
             if (m_filterButton.IsClicked) {
                 List<string> items = ["All", "Name", "Contents", "Favorite"];
-                items.AddRange(BlocksManager.Categories);
+                foreach (string category in BlocksManager.Categories) {
+                    if (m_blockBehavior.AvailableCategories.Contains(category)) {
+                        items.Add(category);
+                    }
+                }
                 DialogsManager.ShowDialog(
                     m_componentPlayer.GuiWidget,
                     new ListSelectionDialog(
@@ -541,7 +545,9 @@ namespace Game {
             HashSet<int> result = [];
             if (filter == null) {
                 result.UnionWith(m_blockBehavior.PlaceableBlockContents);
+                result.UnionWith(m_blockBehavior.PlaceableBlockValues);
                 result.UnionWith(m_blockBehavior.FavoriteTargets);
+                result.UnionWith(m_data.ContentsTargets);
                 result.UnionWith(m_data.ValueTargets);
             }
             else {
@@ -550,7 +556,17 @@ namespace Game {
                         result.Add(contents);
                     }
                 }
+                foreach (int value in m_blockBehavior.PlaceableBlockValues) {
+                    if (filter(value)) {
+                        result.Add(value);
+                    }
+                }
                 foreach (int target in m_blockBehavior.FavoriteTargets) {
+                    if (filter(target)) {
+                        result.Add(target);
+                    }
+                }
+                foreach (int target in m_data.ContentsTargets) {
                     if (filter(target)) {
                         result.Add(target);
                     }

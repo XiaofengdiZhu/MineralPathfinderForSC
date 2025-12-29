@@ -1,6 +1,10 @@
 ﻿# Mineral Pathfinder For Survivalcraft 生存战争寻矿器
 
+## Download 下载
+
 [Click To Download 点此下载](https://github.com/XiaofengdiZhu/MineralPathfinderForSC/releases)
+
+## Introduction 介绍
 
 This mod adds a new block: the Mineral Pathfinder.  
 You can make a Mineral Pathfinder from 9 kinds of mineral chunks on a crafting table. Place it on the ground and connect it to a button or other power source; each time it receives a high signal, it performs a scan.  
@@ -20,7 +24,7 @@ The five buttons at the bottom are:
 
 On the right side of the dialog, there are three settings:
 
-1. Result Group Count: the count of target block groups to scan for. The path line will connect all results together. Default is 1, maximum is 8.
+1. Result Group Count: the count of target block groups to scan for. The path line will connect all results together. Default is 1, maximum is 64.
 2. Scan Range: measured in blocks; both the default and maximum are infinity.
 3. Show Indicator: whether to display a moving arrow indicator along the path to indicate the direction. Enabled by default.
 
@@ -42,13 +46,33 @@ On the right side of the dialog, there are three settings:
 
 对话框的右半边有三个设置项：
 
-1. 最大结果数：最多扫描多少组的目标方块，路径会把所有结果串起来。默认 1，最多 8
+1. 最大结果数：最多扫描多少组的目标方块，路径会把所有结果串起来。默认 1，最多 64
 2. 扫描范围：单位格，默认和最大值均为无限
 3. 显示箭头：是否在路径上显示一个移动的箭头，用于指示方向。默认开启
 
 ![Dialog 对话框](https://github.com/XiaofengdiZhu/MineralPathfinderForSC/blob/main/DocRes/Dialog.webp?raw=true)
 
 ![Crafting Recipe 合成表](https://github.com/XiaofengdiZhu/MineralPathfinderForSC/blob/main/DocRes/CraftingRecipe.webp?raw=true)
+
+## Q&A 常见问题
+
+> Q: Why it can't find the target block nearby?
+
+A：The most probable reason is that the target block has unique data, but the data of the nearby block is different from the target one.  
+For example: the data of a pulling piston block, that hasn't been placed on the ground, is 450. But once the pulling piston placed on the ground, its udata varies depending on its direction.  
+There are two solutions to solve this problem:
+
+1. Manually add all possible unique data for the pulling piston.
+2. Select the block with data 0. Then it will ignore the data of the target block when scanning.
+
+> 问：为什么目标方块就在附近却扫描不到？
+
+答：最有可能的原因是目标方块有特殊值，而附近那个方块的特殊值与目标方块的不同  
+举个例子：没有摆放到地面的粘性活塞的特殊值是 450，而它一旦摆放到地面，就会根据摆向而有不同的特殊值  
+有两个解决方法：
+
+1. 手动添加粘性活塞所有可能的特殊值
+2. 选择特殊值为 0 的该方块，从而在扫描时忽略特殊值
 
 ## Icon 图标
 

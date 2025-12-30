@@ -6,6 +6,8 @@
 
 ## Introduction 介绍
 
+Video: [Youtube](https://youtu.be/5064abPKq3w)
+
 This mod adds a new block: the Mineral Pathfinder.  
 You can make a Mineral Pathfinder from 9 kinds of mineral chunks on a crafting table. Place it on the ground and connect it to a button or other power source; each time it receives a high signal, it performs a scan.  
 It will only scan for exposed targets on the ground or walls, and cannot find targets hidden in rocks or unreachable targets.  
@@ -27,6 +29,8 @@ On the right side of the dialog, there are three settings:
 1. Result Group Count: the count of target block groups to scan for. The path line will connect all results together. Default is 1, maximum is 64.
 2. Scan Range: measured in blocks; both the default and maximum are infinity.
 3. Show Indicator: whether to display a moving arrow indicator along the path to indicate the direction. Enabled by default.
+
+视频：[哔哩哔哩](https://www.bilibili.com/video/BV1vwvvBrEs7/)
 
 本模组添加了一个新方块：寻矿器  
 使用 9 种矿物在工作台合成，摆放在地面上，接上按钮或其他电路元件，每当收到高电平信号时，会进行一次扫描  

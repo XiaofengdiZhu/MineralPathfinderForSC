@@ -84,3 +84,7 @@ There are two solutions to solve this problem:
 > 由我、Gemini、ChatGPT 联合创作
 
 ![Icon 图标](https://github.com/XiaofengdiZhu/MineralPathfinderForSC/blob/main/DocRes/OriginalIcon.webp?raw=true)
+
+## Thanks 感谢
+
+* Spanish Translation 西班牙语翻译: Samuelsan03 (From Discord)

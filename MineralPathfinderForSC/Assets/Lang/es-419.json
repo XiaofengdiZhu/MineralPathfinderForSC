@@ -1,0 +1,69 @@
+{
+  "SubsystemMineralPathfinderBlockBehavior": {
+    "1": "Ya hay un escaneo en curso",
+    "2": "El escaneo es demasiado frecuente",
+    "3": "Escaneo completado, {0} grupos de resultados",
+    "4": "No se encontraron bloques objetivo",
+    "5": "Escaneando, no se puede editar",
+    "6": "Escaneo cancelado",
+    "7": "Iniciar escaneo"
+  },
+  "EditMineralPathfinderDialog": {
+    "1": "Orden de clasificación",
+    "2": "Filtrar",
+    "3": "ID de bloque inválido (1-1023)",
+    "4": "(Admite expresiones regulares)",
+    "5": "Añadido a favoritos",
+    "6": "Eliminado de favoritos",
+    "7": "Último lugar donde dormiste",
+    "8": "Último lugar donde moriste",
+    "SortOrder": {
+      "DisplayOrderAscending": "Orden de visualización ascendente",
+      "DisplayOrderDescending": "Orden de visualización descendente",
+      "ContentsAscending": "ID de bloque ascendente",
+      "ContentsDescending": "ID de bloque descendente",
+      "NameAscending": "Nombre ascendente",
+      "NameDescending": "Nombre descendente"
+    },
+    "FilterMethod": {
+      "All": "Todos",
+      "Name": "Buscar por nombre",
+      "Contents": "Buscar por ID de bloque",
+      "Category": "Categoría",
+      "Favorite": "Favoritos"
+    }
+  },
+  "ManuallyInputBlockValueDialog": {
+    "1": "Entrada inválida"
+  },
+  "Blocks": {
+    "MineralPathfinderBlock:0": {
+      "DisplayName": "Buscador de minerales",
+      "Description": "Se usa para buscar minerales u otros bloques. Colócalo en el suelo y conéctalo a un botón u otro componente eléctrico. Cada vez que reciba una señal de alto nivel realizará un escaneo. Solo buscará objetivos expuestos al aire a lo largo del suelo o las paredes; no puede encontrar objetivos ocultos dentro de la roca ni aquellos a los que no se puede acceder. Cuando encuentra un objetivo con éxito, dibuja una fina línea amarilla brillante sobre el suelo que conduce al destino (la línea desaparecerá al salir del mundo). Puedes ajustar su configuración mediante la opción «Editar».",
+      "CRDescription:0": "Usa 9 tipos de minerales para fabricar el buscador de minerales"
+    }
+  },
+  "ContentWidgets": {
+    "EditMineralPathfinderDialog": {
+      "1": "Buscador de minerales",
+      "2": "Seleccionar",
+      "3": "Número máximo de resultados",
+      "4": "Rango de escaneo",
+      "5": "Mostrar flecha"
+    },
+    "ManuallyInputBlockValueDialog": {
+      "1": "Introducir ID de bloque manualmente",
+      "2": "Aceptar",
+      "3": "Cancelar",
+      "4": "Valor completo:",
+      "5": "ID:",
+      "6": "Valor especial:",
+      "7": "(Si el valor especial es 0, la búsqueda ignorará el valor especial)"
+    },
+    "EditSelectedBlockValuesListDialog": {
+      "1": "Bloques seleccionados",
+      "2": "Eliminar",
+      "3": "Aceptar"
+    }
+  }
+}
